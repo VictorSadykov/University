@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "University.Bot", "Universit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "University.BLL", "University.BLL\University.BLL.csproj", "{5229CADD-6AED-47CC-AC74-2AC09992D7D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "University.Start", "University.Start\University.Start.csproj", "{984D15C8-D018-4F95-9A36-008404B95EEC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{5229CADD-6AED-47CC-AC74-2AC09992D7D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5229CADD-6AED-47CC-AC74-2AC09992D7D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5229CADD-6AED-47CC-AC74-2AC09992D7D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{984D15C8-D018-4F95-9A36-008404B95EEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{984D15C8-D018-4F95-9A36-008404B95EEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{984D15C8-D018-4F95-9A36-008404B95EEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{984D15C8-D018-4F95-9A36-008404B95EEC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
