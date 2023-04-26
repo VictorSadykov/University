@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace University.Bot
+namespace University.BLL
 {
-    internal class BotMessagesEnum
+    public enum MenuType
     {
+        Start,
+        MainMenu
     }
 }

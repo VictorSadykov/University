@@ -8,6 +8,7 @@ using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
+using University.BLL;
 
 namespace University.Bot
 {
@@ -34,7 +35,11 @@ namespace University.Bot
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            
+            long chatId = update.Message.From.Id;
+            ChatData? chatData = ChatDataController.GetChatDataById(chatId);
+
+            if (chatData is null) ChatDataController.AddNewChatData(chatId);
+
         }
 
         Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
