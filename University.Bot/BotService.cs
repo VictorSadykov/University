@@ -34,11 +34,7 @@ namespace University.Bot
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            await _telegramClient.SendTextMessageAsync(
-                update.Message.From.Id,
-                update.Message.Text,
-                cancellationToken: cancellationToken
-                );
+            
         }
 
         Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
