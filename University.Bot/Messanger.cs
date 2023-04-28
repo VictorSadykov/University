@@ -27,7 +27,7 @@ namespace University.Bot
                 {
                     new KeyboardButton[] {""}
                 }
-                )
+                );
         }
     }
 }
