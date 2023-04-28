@@ -15,6 +15,7 @@ namespace University.Bot
     public class BotService : BackgroundService
     {
         private ITelegramBotClient _telegramClient;
+        private Messanger _messanger;
 
         public BotService(ITelegramBotClient telegramClient)
         {
@@ -39,6 +40,19 @@ namespace University.Bot
             ChatData? chatData = ChatDataController.GetChatDataById(chatId);
 
             if (chatData is null) ChatDataController.AddNewChatData(chatId);
+
+            switch (chatData.CurrentMenu)
+            {
+                case MenuType.Start: // Отрисовка главного меню
+
+
+
+                    break;
+                case MenuType.MainMenu:
+                    break;
+                default:
+                    break;
+            }
 
         }
 
