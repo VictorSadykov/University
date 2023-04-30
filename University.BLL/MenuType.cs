@@ -9,6 +9,7 @@ namespace University.BLL
     public enum MenuType
     {
         Start,
-        MainMenu
+        MainMenu,
+        Schedule
     }
 }

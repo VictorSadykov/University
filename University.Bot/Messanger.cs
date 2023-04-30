@@ -13,7 +13,7 @@ namespace University.Bot
     /// </summary>
     public class Messanger
     {
-        private ITelegramBotClient _telegramClient;
+        /*p*//*rivate ITelegramBotClient _telegramClient;
 
         public Messanger(ITelegramBotClient telegramClient)
         {
@@ -25,9 +25,13 @@ namespace University.Bot
             ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(
                 new[]
                 {
-                    new KeyboardButton[] {""}
+                    new KeyboardButton[] {"Расписание"},
+                    new KeyboardButton[] {"Option 2"},
+                    new KeyboardButton[] {"Option 3"},
                 }
                 );
-        }
+
+            return _telegramClient.SendTextMessageAsync()
+        }*/
     }
 }

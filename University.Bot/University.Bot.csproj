@@ -15,8 +15,4 @@
     <ProjectReference Include="..\University.BLL\University.BLL.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="MenuMessages\" />
-  </ItemGroup>
-
 </Project>

@@ -17,6 +17,10 @@ namespace University.BLL
         /// </summary>
         private static string _chatDataListJsonStoragePath = @"C:\Users\Витя\YandexDisk\C#\ПРОЕКТЫ\University\Data\chatData.json";
 
+        /// <summary>
+        /// Добавление нового чата в JSON хранилище
+        /// </summary>
+        /// <param name="chatId"></param>
         public static void AddNewChatData(long chatId)
         {
             ChatData chatDataToAdd = new ChatData()
@@ -28,6 +32,11 @@ namespace University.BLL
             List<ChatData>? chatDataList = GetChatDataList();
             chatDataList.Add(chatDataToAdd);
 
+            WriteChatDataListToJson(chatDataList);
+        }
+
+        public static void WriteChatDataListToJson(List<ChatData> chatDataList)
+        {
             string newChatDataListInJson = JsonConvert.SerializeObject(chatDataList);
 
             using (StreamWriter sw = new StreamWriter(_chatDataListJsonStoragePath))
@@ -82,6 +91,21 @@ namespace University.BLL
             }
 
             return output;
+        }
+
+        public static void UpdateChatDataById(long chatId, ChatData chatDataEditSource)
+        {
+            var chatDataArray = GetChatDataList().ToArray();
+
+            for (int i = 0; i < chatDataArray.Length; i++)
+            {
+                if (chatDataArray[i].ChatId == chatId)
+                {
+                    chatDataArray[i] = chatDataEditSource;
+                }
+            }
+
+            WriteChatDataListToJson(chatDataArray.ToList());
         }
     }
 }

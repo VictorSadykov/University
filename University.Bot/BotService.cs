@@ -9,6 +9,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
 using University.BLL;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace University.Bot
 {
@@ -36,6 +37,8 @@ namespace University.Bot
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            string text = update.Message.Text;
+
             long chatId = update.Message.From.Id;
             ChatData? chatData = ChatDataController.GetChatDataById(chatId);
 
@@ -45,10 +48,51 @@ namespace University.Bot
             {
                 case MenuType.Start: // Отрисовка главного меню
 
+                    ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+                       {
+                            new KeyboardButton[] {MenuMessages.SCHEDULE_MESSAGE},
+                            new KeyboardButton[] {"Option 2"},
+                            new KeyboardButton[] {"Option 3"},
+                       }
+                    );
 
+                    await _telegramClient.SendTextMessageAsync(
+                        chatId,
+                        text: "Выберите пункт меню",
+                        replyMarkup: replyMarkup,
+                        cancellationToken: cancellationToken
+                        );
+
+                    chatData.CurrentMenu = MenuType.MainMenu;
+                    ChatDataController.UpdateChatDataById(chatId, chatData);
 
                     break;
+
                 case MenuType.MainMenu:
+
+                    switch (text)
+                    {
+                        case MenuMessages.SCHEDULE_MESSAGE:
+
+                            await _telegramClient.SendTextMessageAsync(
+                                chatId,
+                                "РАСПИСАНИЕ",
+                                replyMarkup: new ReplyKeyboardMarkup(new[]
+                                {
+                                    new KeyboardButton[] {"Назад"}
+                                }),
+                                cancellationToken: cancellationToken
+                                );
+
+                            chatData.CurrentMenu = MenuType.Schedule;
+                            ChatDataController.UpdateChatDataById(chatId, chatData);
+
+                            break;
+
+                        default:
+                            break;
+                    }
+
                     break;
                 default:
                     break;
