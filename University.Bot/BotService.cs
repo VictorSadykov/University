@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
+using University.Configuration;
 using Telegram.Bot.Polling;
 using University.BLL;
 using Telegram.Bot.Types.ReplyMarkups;

@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace University.DLL.Sqlite.Entities
 {
-    internal class Group
+    public class Group
     {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int SubGroupNumber { get; set; }
+        public List<Lesson> Lessons { get; set; }
+        public List<Exam> Exams { get; set; }
     }
 }

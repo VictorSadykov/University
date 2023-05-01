@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using University.Configuration;
 
 namespace University.BLL
 {
@@ -15,7 +16,7 @@ namespace University.BLL
         /// <summary>
         /// Путь к JSON хранилищу chatData
         /// </summary>
-        private static string _chatDataListJsonStoragePath = @"C:\Users\Витя\YandexDisk\C#\ПРОЕКТЫ\University\Data\chatData.json";
+        private static string _chatDataListJsonStoragePath = DataConfig.DataFolderPath + "chatData.json";
 
         /// <summary>
         /// Добавление нового чата в JSON хранилище
