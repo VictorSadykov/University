@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace University.DLL.Sqlite.Entities
 {
-    internal class Group
+    internal class Corpus
     {
     }
 }
