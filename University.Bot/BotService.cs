@@ -18,11 +18,13 @@ namespace University.Bot
     public class BotService : BackgroundService
     {
         private ITelegramBotClient _telegramClient;
+        private ChatDataController _chatController;
         private Messanger _messanger;
 
         public BotService(ITelegramBotClient telegramClient)
         {
             _telegramClient = telegramClient;
+            _chatController = new ChatDataController();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -44,12 +46,12 @@ namespace University.Bot
             string text = update.Message.Text; // Текст сообщения
 
             long chatId = update.Message.From.Id; // Проверка новый ли чат
-            ChatData? chatData = ChatDataController.GetChatDataById(chatId);
+            ChatData? chatData = _chatController.GetChatDataById(chatId);
 
             if (chatData is null)
             {
-                ChatDataController.AddNewChatData(chatId);
-                chatData = ChatDataController.GetChatDataById(chatId);
+                _chatController.AddNewChatData(chatId);
+                chatData = _chatController.GetChatDataById(chatId);
             }
 
             switch (chatData.CurrentMenu) // Проверка в каком меню должен находится пользователь
@@ -58,7 +60,7 @@ namespace University.Bot
 
                     await messanger.SendStartMenuMessageAsync(chatId);
 
-                    ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
+                    _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
 
                     break;
 
@@ -68,9 +70,9 @@ namespace University.Bot
                     {
                         case MenuMessages.START_INSERT_GROUP_NAME:
 
-                            await messanger.SendStartingInsertGroupNameAsync(chatId);                            
+                            await messanger.SendStartingInsertGroupNameAsync(chatId);
 
-                            ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
+                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
 
                             break;
 
@@ -78,7 +80,7 @@ namespace University.Bot
 
                             await messanger.SendMainMenuAsync(chatId);
 
-                            ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
 
                             break;
 
@@ -90,14 +92,14 @@ namespace University.Bot
 
                 case MenuType.InsertingGroupName:
 
-                    if (text == MenuMessages.BACK) ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
+                    if (text == MenuMessages.BACK) _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
 
-                    bool isGroupNameIsValid = ChatDataController.UpdateChatDataGroupName(chatId, text, chatData);
+                    bool isGroupNameIsValid = _chatController.UpdateChatDataGroupName(chatId, text, chatData);
 
                     if (isGroupNameIsValid)
                     {
                         await messanger.SendMainMenuAsync(chatId);
-                        ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                        _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                     }
                     else
                     {
@@ -123,7 +125,7 @@ namespace University.Bot
                                 );
 
                             chatData.CurrentMenu = MenuType.Schedule;
-                            ChatDataController.UpdateChatDataById(chatId, chatData);
+                            _chatController.UpdateChatDataById(chatId, chatData);
 
                             break;
 

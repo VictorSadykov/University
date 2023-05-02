@@ -9,21 +9,37 @@ namespace University.BLL
 {
     public class JsonService
     {
-        public void WriteObjectToJson<T>(T objectToSerialize, string path)
+        private string _storagePath;
+
+        public JsonService(string storagePath)
+        {
+            _storagePath = storagePath;
+        }
+
+        /// <summary>
+        /// Записывает объект в JSON хранилище
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="objectToSerialize">Объект для записи</param>
+        public void WriteObjectToJson<T>(T objectToSerialize)
         {
             string serializedObject = JsonConvert.SerializeObject(objectToSerialize);
 
-            using (StreamWriter sw = new StreamWriter(path))
+            using (StreamWriter sw = new StreamWriter(_storagePath))
             {
                 sw.WriteLine(serializedObject);
             }
         }
 
-        public string GetChatDataListInJson()
+        /// <summary>
+        /// Получает объект в формате JSON строки
+        /// </summary>
+        /// <returns></returns>
+        public string GetObjectInJson()
         {
             string output = null;
 
-            using (StreamReader sr = new StreamReader(_chatDataListJsonStoragePath))
+            using (StreamReader sr = new StreamReader(_storagePath))
             {
                 output = sr.ReadToEnd();
             }
@@ -31,16 +47,20 @@ namespace University.BLL
             return output;
         }
 
-        public List<ChatData>? GetChatDataList()
+        /// <summary>
+        /// Возвращает десириализованный объект из JSON хранилища
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T? GetObject<T>() where T : new()
         {
-            List<ChatData>? chatDataList = JsonConvert
-                .DeserializeObject<List<ChatData>?>(
-                    GetChatDataListInJson()
-                );
+            string objectJsonString = GetObjectInJson();
 
-            if (chatDataList is null) chatDataList = new List<ChatData>();
+            T? objectFromJsonStorage = JsonConvert.DeserializeObject<T?>(objectJsonString);
 
-            return chatDataList;
+            if (objectFromJsonStorage is null) objectFromJsonStorage = new T();
+
+            return objectFromJsonStorage;
         }
     }
 }
