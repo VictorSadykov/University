@@ -11,6 +11,6 @@ namespace University.Configuration
         public const string START_INSERT_GROUP_NAME = "Ввести название группы";
         public const string START_SKIP = "Пропустить";
         public const string BACK = "Назад";
-        public const string SCHEDULE_MESSAGE = "Посмотреть расписание";
+        public const string SCHEDULE_MESSAGE = "Посмотреть расписание на сегодня";
     }
 }

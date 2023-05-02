@@ -12,6 +12,7 @@ using Telegram.Bot.Polling;
 using University.BLL;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
+using University.DLL.Sqlite.Entities;
 
 namespace University.Bot
 {
@@ -58,13 +59,13 @@ namespace University.Bot
             {
                 case MenuType.Start: // Отрисовка стартового меню
 
-                    await messanger.SendStartMenuMessageAsync(chatId);
+                    await messanger.SendMainMenuAsync(chatId);
 
-                    _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
+                    _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
 
                     break;
 
-                case MenuType.StartMenu: // Отрисовка главного меню или меню ввода группы
+                /*case MenuType.StartMenu: // Отрисовка главного меню или меню ввода группы
 
                     switch (text)
                     {
@@ -88,13 +89,24 @@ namespace University.Bot
                             break;
                     }
 
-                    break;
+                    break;*/
 
-                case MenuType.InsertingGroupName:
+                case MenuType.LessonScheduleForToday:
 
-                    if (text == MenuMessages.BACK) _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
+                    if (text == MenuMessages.BACK) _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData); // Вернуться в главное меню
 
-                    bool isGroupNameIsValid = _chatController.UpdateChatDataGroupName(chatId, text, chatData);
+                    if (_groupRepo.GetGroupByNameAsync(text) is null)
+                    {
+                        await messanger.GroupIsNotFoundMessage(chatId);
+                    }
+                    else
+                    {
+                        List<Lesson> todayLessons = 
+                        await messanger.SendTodayScheduleAsync(chatId);
+                    }
+
+
+                    /*bool isGroupNameIsValid = _chatController.UpdateChatDataGroupName(chatId, text, chatData);
 
                     if (isGroupNameIsValid)
                     {
@@ -104,7 +116,7 @@ namespace University.Bot
                     else
                     {
                         await messanger.SendWrongGroupMessage(chatId);
-                    }
+                    }*/
 
                     break;
 
@@ -114,18 +126,8 @@ namespace University.Bot
                     {
                         case MenuMessages.SCHEDULE_MESSAGE:
 
-                            await _telegramClient.SendTextMessageAsync(
-                                chatId,
-                                "РАСПИСАНИЕ",
-                                replyMarkup: new ReplyKeyboardMarkup(new[]
-                                {
-                                    new KeyboardButton[] {"Назад"}
-                                }),
-                                cancellationToken: cancellationToken
-                                );
-
-                            chatData.CurrentMenu = MenuType.Schedule;
-                            _chatController.UpdateChatDataById(chatId, chatData);
+                            await messanger.SendStartingInsertGroupNameAsync(chatId);
+                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
 
                             break;
 

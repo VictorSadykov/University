@@ -11,7 +11,7 @@ namespace University.BLL
         Start,
         StartMenu,
         MainMenu,
-        Schedule,
+        LessonScheduleForToday,
         InsertingGroupName
     }
 }

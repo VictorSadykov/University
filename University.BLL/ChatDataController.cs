@@ -75,11 +75,10 @@ namespace University.BLL
 
         public bool UpdateChatDataGroupName(long chatId, string? text, ChatData chatData)
         {
-            if (true) // GroupRepo.GetGroupName(text) 
-            {
+            
                 chatData.GroupName = text;
                 return true;
-            }
+            
 
             return false;
         }

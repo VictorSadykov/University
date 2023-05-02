@@ -75,11 +75,11 @@ namespace University.Bot
             );
         }
 
-        public async Task<Message> SendWrongGroupMessage(long chatId)
+        public async Task<Message> GroupIsNotFoundMessage(long chatId)
         {
             return await _telegramClient.SendTextMessageAsync(
                 chatId,
-                text: "По данной группе ничего не найдено",
+                text: "Данной группы не существует. Попробуйте ввести название группы правильно.",
                 cancellationToken: _ct,
                 parseMode: ParseMode.Html
             );
