@@ -11,6 +11,7 @@ using University.Configuration;
 using Telegram.Bot.Polling;
 using University.BLL;
 using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.Bot.Types.Enums;
 
 namespace University.Bot
 {
@@ -38,34 +39,70 @@ namespace University.Bot
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            string text = update.Message.Text;
+            Messanger messanger = new Messanger(botClient, cancellationToken); // Инициализация объекта службы отправки сообщений
 
-            long chatId = update.Message.From.Id;
+            string text = update.Message.Text; // Текст сообщения
+
+            long chatId = update.Message.From.Id; // Проверка новый ли чат
             ChatData? chatData = ChatDataController.GetChatDataById(chatId);
 
-            if (chatData is null) ChatDataController.AddNewChatData(chatId);
-
-            switch (chatData.CurrentMenu)
+            if (chatData is null)
             {
-                case MenuType.Start: // Отрисовка главного меню
+                ChatDataController.AddNewChatData(chatId);
+                chatData = ChatDataController.GetChatDataById(chatId);
+            }
 
-                    ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
-                       {
-                            new KeyboardButton[] {MenuMessages.SCHEDULE_MESSAGE},
-                            new KeyboardButton[] {"Option 2"},
-                            new KeyboardButton[] {"Option 3"},
-                       }
-                    );
+            switch (chatData.CurrentMenu) // Проверка в каком меню должен находится пользователь
+            {
+                case MenuType.Start: // Отрисовка стартового меню
 
-                    await _telegramClient.SendTextMessageAsync(
-                        chatId,
-                        text: "Выберите пункт меню",
-                        replyMarkup: replyMarkup,
-                        cancellationToken: cancellationToken
-                        );
+                    await messanger.SendStartMenuMessageAsync(chatId);
 
-                    chatData.CurrentMenu = MenuType.MainMenu;
-                    ChatDataController.UpdateChatDataById(chatId, chatData);
+                    ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
+
+                    break;
+
+                case MenuType.StartMenu: // Отрисовка главного меню или меню ввода группы
+
+                    switch (text)
+                    {
+                        case MenuMessages.START_INSERT_GROUP_NAME:
+
+                            await messanger.SendStartingInsertGroupNameAsync(chatId);                            
+
+                            ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
+
+                            break;
+
+                        case MenuMessages.START_SKIP:
+
+                            await messanger.SendMainMenuAsync(chatId);
+
+                            ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+
+                            break;
+
+                        default:
+                            break;
+                    }
+
+                    break;
+
+                case MenuType.InsertingGroupName:
+
+                    if (text == MenuMessages.BACK) ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.StartMenu, chatData);
+
+                    bool isGroupNameIsValid = ChatDataController.UpdateChatDataGroupName(chatId, text, chatData);
+
+                    if (isGroupNameIsValid)
+                    {
+                        await messanger.SendMainMenuAsync(chatId);
+                        ChatDataController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                    }
+                    else
+                    {
+                        await messanger.SendWrongGroupMessage(chatId);
+                    }
 
                     break;
 

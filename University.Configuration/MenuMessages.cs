@@ -8,6 +8,9 @@ namespace University.Configuration
 {
     public static class MenuMessages
     {
+        public const string START_INSERT_GROUP_NAME = "Ввести название группы";
+        public const string START_SKIP = "Пропустить";
+        public const string BACK = "Назад";
         public const string SCHEDULE_MESSAGE = "Посмотреть расписание";
     }
 }

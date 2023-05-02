@@ -108,5 +108,22 @@ namespace University.BLL
 
             WriteChatDataListToJson(chatDataArray.ToList());
         }
+
+        public static void UpdateChatDataCurrentMenuById(long chatId, MenuType menuType, ChatData chatData)
+        {
+            chatData.CurrentMenu = menuType;
+            UpdateChatDataById(chatId, chatData);
+        }
+
+        public static bool UpdateChatDataGroupName(long chatId, string? text, ChatData chatData)
+        {
+            if (true) // GroupRepo.GetGroupName(text) 
+            {
+                chatData.GroupName = text;
+                return true;
+            }
+
+            return false;
+        }
     }
 }

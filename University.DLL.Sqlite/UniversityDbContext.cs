@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using University.Configuration;
 using University.DLL.Sqlite.Entities;
 
 namespace University.DLL.Sqlite
@@ -12,7 +13,7 @@ namespace University.DLL.Sqlite
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite("Data Source=");
+            optionsBuilder.UseSqlite($"Data Source={DataConfig.DataFolderPath}UNIVERSITY.db");
         }
     }
 }

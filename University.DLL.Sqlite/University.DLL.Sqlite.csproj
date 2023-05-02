@@ -16,4 +16,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\University.Configuration\University.Configuration.csproj" />
+  </ItemGroup>
+
 </Project>
