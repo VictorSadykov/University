@@ -13,19 +13,26 @@ using University.BLL;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
 using University.DLL.Sqlite.Entities;
+using University.DLL.Sqlite.Repositories.Abstract;
 
 namespace University.Bot
 {
     public class BotService : BackgroundService
     {
         private ITelegramBotClient _telegramClient;
-        private ChatDataController _chatController;
+        private IGroupRepository _groupRepo;
+        private ILessonRepository _lessonRepo;
+        private ChatDataController _chatController = new ChatDataController();
         private Messanger _messanger;
 
-        public BotService(ITelegramBotClient telegramClient)
+        public BotService(
+            ITelegramBotClient telegramClient, 
+            IGroupRepository groupRepo, 
+            ILessonRepository lessonRepo)
         {
             _telegramClient = telegramClient;
-            _chatController = new ChatDataController();
+            _groupRepo = groupRepo;
+            _lessonRepo = lessonRepo;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -95,14 +102,16 @@ namespace University.Bot
 
                     if (text == MenuMessages.BACK) _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData); // Вернуться в главное меню
 
-                    if (_groupRepo.GetGroupByNameAsync(text) is null)
+                    Group group = _groupRepo.GetGroupByNameAsync(text);
+
+                    if (group is null)
                     {
                         await messanger.GroupIsNotFoundMessage(chatId);
                     }
                     else
                     {
-                        List<Lesson> todayLessons = 
-                        await messanger.SendTodayScheduleAsync(chatId);
+                        List<Lesson> todayLessons = _lessonRepo.GetTodayLessonsByGroupName(group);
+                        await messanger.SendOneDayScheduleAsync(chatId, List<Lesson>);
                     }
 
 

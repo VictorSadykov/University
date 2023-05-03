@@ -20,9 +20,4 @@
     <ProjectReference Include="..\University.Configuration\University.Configuration.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Repositories\Abstract\" />
-    <Folder Include="Repositories\Real\" />
-  </ItemGroup>
-
 </Project>
