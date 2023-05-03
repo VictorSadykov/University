@@ -38,11 +38,9 @@ namespace University.DLL.Sqlite.Repositories.Real
 
         }
 
-        public async Task<List<Lesson>> GetWeekLessonsByGroupNameAsync(string groupName)
+        public async Task<List<Lesson>> GetWeekLessonsByGroupNameAsync(string groupName, int weekParity)
         {
             List<Lesson> allGroupLessons = await Task.Run(() => GetAllLessonByGroupNameAsync(groupName).Result);
-
-            int weekParity = WeekParityChecker.GetCurrentWeekParity();
 
             return allGroupLessons.
                 Where(l => l.WeekNumber == weekParity)

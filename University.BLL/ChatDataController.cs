@@ -50,6 +50,17 @@ namespace University.BLL
             return chatData;
         }
 
+        public string? GetGroupNameFromChatData(long chatId)
+        {
+            List<ChatData>? chatDataList = _jsonService.GetObject<List<ChatData>>();
+
+            ChatData? chatData = chatDataList?
+                .Where(cd => cd.ChatId == chatId)
+                .FirstOrDefault();
+
+            return chatData?.GroupName;
+        }
+
 
         public void UpdateChatDataById(long chatId, ChatData chatDataEditSource)
         {
@@ -73,14 +84,12 @@ namespace University.BLL
             UpdateChatDataById(chatId, chatData);
         }
 
-        public bool UpdateChatDataGroupName(long chatId, string? text, ChatData chatData)
+        public void UpdateChatDataGroupName(long chatId, string groupName, ChatData chatData)
         {
-            
-                chatData.GroupName = text;
-                return true;
-            
-
-            return false;
+            chatData.GroupName = groupName;
+            UpdateChatDataById(chatId, chatData);
         }
+
+
     }
 }

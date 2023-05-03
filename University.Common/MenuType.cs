@@ -12,6 +12,9 @@ namespace University.Common
         StartMenu,
         MainMenu,
         LessonScheduleForToday,
+        LessonScheduleForWeek,
+        PracticeSchedule,
+        ExamSchedule,
         InsertingGroupName
     }
 }

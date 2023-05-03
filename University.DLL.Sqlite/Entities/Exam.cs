@@ -9,6 +9,7 @@ namespace University.DLL.Sqlite.Entities
     public class Exam
     {
         public int Id { get; set; }
+        public string Name { get; set; }
         public DateTime StartDateTime { get; set; }
         public string TeacherFullName { get; set; }
         public ExaminationType ExaminationType { get; set; }
