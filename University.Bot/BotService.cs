@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
-using University.Configuration;
 using Telegram.Bot.Polling;
 using University.BLL;
+using University.Common;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
 using University.DLL.Sqlite.Entities;
@@ -102,16 +102,16 @@ namespace University.Bot
 
                     if (text == MenuMessages.BACK) _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData); // Вернуться в главное меню
 
-                    Group group = _groupRepo.GetGroupByNameAsync(text);
+                    List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
 
-                    if (group is null)
+                    if (groups is null)
                     {
-                        await messanger.GroupIsNotFoundMessage(chatId);
+                        await messanger.GroupIsNotFoundMessageAsync(chatId);
                     }
                     else
                     {
-                        List<Lesson> todayLessons = _lessonRepo.GetTodayLessonsByGroupName(group);
-                        await messanger.SendOneDayScheduleAsync(chatId, List<Lesson>);
+                        List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groups.FirstOrDefault().Name).Result);
+                       // await messanger.SendOneDayScheduleAsync(chatId, List<Lesson>);
                     }
 
 

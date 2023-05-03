@@ -9,6 +9,8 @@ namespace University.DLL.Sqlite.Repositories.Abstract
 {
     public interface ILessonRepository
     {
+        Task<List<Lesson>> GetAllLessonByGroupNameAsync(string groupName);
         Task<List<Lesson>> GetTodayLessonsByGroupNameAsync(string groupName);
+        Task<List<Lesson>> GetWeekLessonsByGroupNameAsync(string groupName);
     }
 }

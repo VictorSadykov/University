@@ -9,6 +9,6 @@ namespace University.DLL.Sqlite.Repositories.Abstract
 {
     public interface IGroupRepository
     {
-        Task<Group?> GetGroupByNameAsync(string groupName); 
+        Task<List<Group>?> GetAllGroupsByNameAsync(string groupName); 
     }
 }

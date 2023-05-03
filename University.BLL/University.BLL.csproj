@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\University.Configuration\University.Configuration.csproj" />
+    <ProjectReference Include="..\University.Configuration\University.Common.csproj" />
     <ProjectReference Include="..\University.DLL.Sqlite\University.DLL.Sqlite.csproj" />
   </ItemGroup>
 

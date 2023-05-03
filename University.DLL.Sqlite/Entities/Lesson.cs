@@ -12,7 +12,7 @@ namespace University.DLL.Sqlite.Entities
         public string Name { get; set; }
         public LessonType LessonType { get; set; } // 0 - Лекция, 1 - Практика, 2 - лаб. р
         public int TimeNumber { get; set; } // Какая пара по счёту 
-        public int DayNumber { get; set; }
+        public DayOfWeek DayNumber { get; set; }
         public int WeekNumber { get; set; }
         public string TeacherFullName { get; set; }
         public string CabNumber { get; set; }

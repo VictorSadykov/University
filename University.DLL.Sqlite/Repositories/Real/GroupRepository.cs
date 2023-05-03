@@ -13,10 +13,11 @@ namespace University.DLL.Sqlite.Repositories.Real
     {
         private readonly UniversityDbContext _dbContext = new UniversityDbContext();
 
-        public async Task<Group?> GetGroupByNameAsync(string groupName)
+        public async Task<List<Group>?> GetAllGroupsByNameAsync(string groupName)
         {
             return await _dbContext.Groups
-                .FindAsync(groupName);
+                .Where(g => g.Name == groupName)
+                .ToListAsync();
         }
     }
 }

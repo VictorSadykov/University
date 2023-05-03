@@ -8,7 +8,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using University.Configuration;
+using University.Common;
 
 namespace University.Bot
 {
@@ -75,7 +75,7 @@ namespace University.Bot
             );
         }
 
-        public async Task<Message> GroupIsNotFoundMessage(long chatId)
+        public async Task<Message> GroupIsNotFoundMessageAsync(long chatId)
         {
             return await _telegramClient.SendTextMessageAsync(
                 chatId,

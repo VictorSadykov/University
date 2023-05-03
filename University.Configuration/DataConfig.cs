@@ -1,4 +1,4 @@
-﻿namespace University.Configuration
+﻿namespace University.Common
 {
     public static class DataConfig
     {

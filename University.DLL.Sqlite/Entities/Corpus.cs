@@ -11,7 +11,7 @@ namespace University.DLL.Sqlite.Entities
         public int Id { get; set; }
         public string Name { get; set; }
         public string Address { get; set; }
-        public List<Lesson> Lessons { get; set; }
-        public List<Exam> Exams { get; set; }
+        public List<Lesson>? Lessons { get; set; }
+        public List<Exam>? Exams { get; set; }
     }
 }

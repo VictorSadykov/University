@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace University.BLL
+namespace University.Common
 {
     public enum MenuType
     {

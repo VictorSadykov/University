@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace University.Configuration
+namespace University.Common
 {
     public static class MenuMessages
     {
