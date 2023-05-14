@@ -58,18 +58,18 @@ namespace University.Bot
             ChatData? chatData = null;
             if (update.Type == UpdateType.CallbackQuery)
             {
-                chatData = _chatController.GetChatDataById(update.CallbackQuery.From.Id);
-                _chatController.UpdateChatDataCurrentMenuById(update.CallbackQuery.From.Id, MenuType.MainMenu, chatData);
+                chatData = _chatController.GetById(update.CallbackQuery.From.Id);
+                _chatController.UpdateCurrentMenuById(update.CallbackQuery.From.Id, MenuType.MainMenu, chatData);
                 await messanger.SendMainMenuAsync(update.CallbackQuery.From.Id);
                 return;
             }
 
             long chatId = update.Message.From.Id; // Проверка новый ли чат
-            chatData = _chatController.GetChatDataById(chatId);
+            chatData = _chatController.GetById(chatId);
             if (chatData is null)
             {
-                _chatController.AddNewChatData(chatId);
-                chatData = _chatController.GetChatDataById(chatId);
+                _chatController.Add(chatId);
+                chatData = _chatController.GetById(chatId);
             }
             string text = update.Message.Text; // Текст сообщения
 
@@ -78,26 +78,27 @@ namespace University.Bot
             switch (chatData.CurrentMenu) // Проверка в каком меню должен находится пользователь
             {
                 case MenuType.Start: // Отрисовка стартового меню
+                    {
+                        await messanger.SendMainMenuAsync(chatId);
 
-                    await messanger.SendMainMenuAsync(chatId);
+                        _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
 
-                    _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-
-                    break;
+                        break;
+                    }
 
                 case MenuType.LessonScheduleForToday:
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                             await messanger.SendMainMenuAsync(chatId);
 
-                            break;
                         }
+                        break;
                         // Вернуться в главное меню
+/*
 
-
-                            List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
+                        List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
 
                         if (groups is null)
                         {
@@ -109,7 +110,7 @@ namespace University.Bot
                             await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groups.FirstOrDefault().Name, DateTime.Now);
                         }
 
-                        break;
+                        break;*/
                     }
 
 
@@ -119,7 +120,7 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                             await messanger.SendMainMenuAsync(chatId);
                             break;
                         }                        
@@ -149,7 +150,7 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                             await messanger.SendMainMenuAsync(chatId);
 
                             break;
@@ -173,7 +174,7 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                             await messanger.SendMainMenuAsync(chatId);
 
                             break;
@@ -193,69 +194,109 @@ namespace University.Bot
                         break;
                     }
 
-                    
-
-                case MenuType.MainMenu:
-
-                    switch (text)
+                case MenuType.InsertingGroupName:
                     {
-                        case MenuMessages.WATCH_TODAY_SCHEDULE:
-                            string groupName = null;
+                        if (text == MenuMessages.BACK)
+                        {
+                            GoToMainMenu(messanger, chatId, chatData);
+                            _chatController.UpdateNextMenuById(chatId, null, chatData);
+                            break;
+                        }
 
-                            if (_chatController.GetGroupNameFromChatData(chatId) is null)
+                        List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
+
+                        if (groups is null)
+                        {
+                            await messanger.GroupIsNotFoundMessageAsync(chatId);
+                        }
+                        else
+                        {
+                            _chatController.UpdateGroupName(chatId, text, chatData);
+
+                            switch (chatData.NextMenu)
                             {
-                                await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                case MenuType.LessonScheduleForToday:
+                                    GoToTodaySchedule(messanger, chatId, chatData, text);
+                                    _chatController.UpdateNextMenuById(chatId, null, chatData);
 
+                                    break;
+
+                                default:
+                                    break;
                             }
-                            else
-                            {
-                                List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(_chatController.GetGroupNameFromChatData(chatId)).Result);
+                        }
 
-                                List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groups.FirstOrDefault().Name).Result);
-                                await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groups.FirstOrDefault().Name, DateTime.Now);
-                            }
-
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
-
-
-                            break;
-
-                        case MenuMessages.WATCH_WEEK_SCHEDULE:
-
-                            await messanger.SendStartingInsertGroupNameAsync(chatId);
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);
-
-                            break;
-
-                        case MenuMessages.WATCH_PRACTICE_SCHEDULE:
-
-                            await messanger.SendStartingInsertGroupNameAsync(chatId);
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.PracticeSchedule, chatData);
-
-                            break;
-
-                        case MenuMessages.WATCH_EXAM_SCHEDULE:
-
-                            await messanger.SendStartingInsertGroupNameAsync(chatId);
-                            _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);
-
-                            break;
-
-                        case MenuMessages.WATCH_CORPUS_INFO:
-
-                            List<Corpus>? corpuses = await Task.Run(() => _corpusRepo.GetAllAsync().Result);
-
-                            await messanger.SendCorpusInfo(chatId, corpuses);
-                            await messanger.SendMainMenuAsync(chatId);
-
-                            break;
-                        default:
-                            break;
+                        break;
                     }
 
-                    break;
-                default:
-                    break;
+                case MenuType.MainMenu:
+                    {
+                        switch (text)
+                        {
+                            case MenuMessages.WATCH_TODAY_SCHEDULE:
+
+                                string? groupName = _chatController.GetGroupName(chatId);
+
+                                if (groupName is null)
+                                {
+                                    await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                    _chatController.UpdateNextMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
+                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
+                                }
+                                else
+                                {
+                                    GoToTodaySchedule(messanger, chatId, chatData, groupName);
+                                }
+
+                                /*if (_chatController.GetGroupNameFromChatData(chatId) is null)
+                                {
+                                    await messanger.SendStartingInsertGroupNameAsync(chatId);
+
+                                }
+
+                                _chatController.UpdateChatDataCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);*/
+
+                                break;
+
+                            case MenuMessages.WATCH_WEEK_SCHEDULE:
+
+
+
+                                await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);
+
+                                break;
+
+                            case MenuMessages.WATCH_PRACTICE_SCHEDULE:
+
+                                await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.PracticeSchedule, chatData);
+
+                                break;
+
+                            case MenuMessages.WATCH_EXAM_SCHEDULE:
+
+                                await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);
+
+                                break;
+
+                            case MenuMessages.WATCH_CORPUS_INFO:
+
+                                List<Corpus>? corpuses = await Task.Run(() => _corpusRepo.GetAllAsync().Result);
+
+                                await messanger.SendCorpusInfo(chatId, corpuses);
+                                await messanger.SendMainMenuAsync(chatId);
+
+                                break;
+                            default:
+                                break;
+                        }
+
+                        break;
+
+                        
+                    }
             }
 
         }
@@ -274,6 +315,20 @@ namespace University.Bot
             Thread.Sleep(10000);
 
            return Task.CompletedTask;        
+        }
+
+        public async void GoToMainMenu(Messanger messager, long chatId, ChatData chatData)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            await messager.SendMainMenuAsync(chatId);
+        }
+
+        public async void GoToTodaySchedule(Messanger messanger, long chatId, ChatData chatData, string groupName)
+        {
+            List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groupName).Result);
+
+            await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groupName, DateTime.Now);
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
         }
     }
 }

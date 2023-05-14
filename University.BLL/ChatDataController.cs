@@ -19,7 +19,7 @@ namespace University.BLL
         /// Добавление нового чата в JSON хранилище
         /// </summary>
         /// <param name="chatId"></param>
-        public void AddNewChatData(long chatId)
+        public void Add(long chatId)
         {
             ChatData chatDataToAdd = new ChatData()
             {
@@ -39,7 +39,7 @@ namespace University.BLL
         /// </summary>
         /// <param name="chatId"></param>
         /// <returns></returns>
-        public ChatData? GetChatDataById(long chatId)
+        public ChatData? GetById(long chatId)
         {
             List<ChatData>? chatDataList = _jsonService.GetObject< List<ChatData> >();
 
@@ -50,7 +50,7 @@ namespace University.BLL
             return chatData;
         }
 
-        public string? GetGroupNameFromChatData(long chatId)
+        public string? GetGroupName(long chatId)
         {
             List<ChatData>? chatDataList = _jsonService.GetObject<List<ChatData>>();
 
@@ -61,8 +61,13 @@ namespace University.BLL
             return chatData?.GroupName;
         }
 
+        public void UpdateNextMenuById(long chatId, MenuType? menuType, ChatData chatData)
+        {
+            chatData.NextMenu = menuType;
+            UpdateById(chatId, chatData);
+        }
 
-        public void UpdateChatDataById(long chatId, ChatData chatDataEditSource)
+        public void UpdateById(long chatId, ChatData chatDataEditSource)
         {
             var chatDataArray = _jsonService.GetObject< List<ChatData> >()
                 .ToArray();
@@ -78,16 +83,16 @@ namespace University.BLL
             _jsonService.WriteObjectToJson(chatDataArray.ToList());
         }
 
-        public void UpdateChatDataCurrentMenuById(long chatId, MenuType menuType, ChatData chatData)
+        public void UpdateCurrentMenuById(long chatId, MenuType menuType, ChatData chatData)
         {
             chatData.CurrentMenu = menuType;
-            UpdateChatDataById(chatId, chatData);
+            UpdateById(chatId, chatData);
         }
 
-        public void UpdateChatDataGroupName(long chatId, string groupName, ChatData chatData)
+        public void UpdateGroupName(long chatId, string groupName, ChatData chatData)
         {
             chatData.GroupName = groupName;
-            UpdateChatDataById(chatId, chatData);
+            UpdateById(chatId, chatData);
         }
 
 

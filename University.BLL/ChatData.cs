@@ -11,6 +11,7 @@ namespace University.BLL
     {
         public long ChatId { get; set; }
         public MenuType CurrentMenu { get; set; }
+        public MenuType? NextMenu { get; set; }
         public string? GroupName { get; set; }
     }
 }
