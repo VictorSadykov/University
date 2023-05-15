@@ -9,11 +9,11 @@ using University.Common;
 namespace University.BLL
 {
     /// <summary>
-    /// Статический класс, оперирующий с JSON хранилищем chatData
+    /// Класс, оперирующий с JSON хранилищем chatData
     /// </summary>
     public class ChatDataController
     {
-        private JsonService _jsonService = new JsonService(DataConfig.DataFolderPath + "chatData.json");       
+        private JsonService _jsonService = new JsonService(DataConfig.DATA_FOLDER_PATH + "chatData.json");       
 
         /// <summary>
         /// Добавление нового чата в JSON хранилище
@@ -95,6 +95,6 @@ namespace University.BLL
             UpdateById(chatId, chatData);
         }
 
-
+      
     }
 }

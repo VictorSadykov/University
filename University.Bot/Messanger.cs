@@ -66,15 +66,10 @@ namespace University.Bot
 
         public async Task<Message> SendMainMenuAsync(long chatId)
         {
-            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
-                {
-                    new KeyboardButton[] {MenuMessages.WATCH_TODAY_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_WEEK_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_EXAM_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_PRACTICE_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_CORPUS_INFO},
-                }
-            );
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(DrawMainMenu())
+            {
+                ResizeKeyboard = true
+            };
 
             return await _telegramClient.SendTextMessageAsync(
                 chatId,
@@ -244,6 +239,18 @@ namespace University.Bot
             
         }
 
+        private KeyboardButton[][] DrawMainMenu()
+        {
+            return new[]
+                {
+                    new KeyboardButton[] {MenuMessages.WATCH_TODAY_SCHEDULE},
+                    new KeyboardButton[] {MenuMessages.WATCH_WEEK_SCHEDULE},
+                    new KeyboardButton[] {MenuMessages.WATCH_EXAM_SCHEDULE},
+                    new KeyboardButton[] {MenuMessages.WATCH_PRACTICE_SCHEDULE},
+                    new KeyboardButton[] {MenuMessages.WATCH_CORPUS_INFO},
+                };
+        }
+
         public async Task<Message> SendOneDayScheduleAsync(long chatId, List<Lesson> lessons, string groupName, DateTime dateTime)
         {
             string textMessage = null;
@@ -352,6 +359,81 @@ namespace University.Bot
                 replyMarkup: DrawBackKeyboard(),
                 parseMode: ParseMode.Html
             );
+        }
+
+        public async Task<Message> SendChooseMenuAsync(long chatId)
+        {
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+            {
+                    new KeyboardButton[] {MenuMessages.ENTER_ADMIN_MENU},
+                    new KeyboardButton[] {MenuMessages.ENTER_ORD_MENU},
+            })
+            { 
+                ResizeKeyboard = true
+            };
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Ваш username находится в списке админов. Какое меню хотите открыть?",
+                cancellationToken: _ct,
+                replyMarkup: replyMarkup
+                );
+        }
+
+        public async Task<Message> SendAdminMainMenuAsync(long chatId)
+        {
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton[] {MenuMessages.ADMIN_LOAD_SCHEDULE},
+                new KeyboardButton[] {MenuMessages.CHOOSE_MENU}
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Выберите пункт меню",
+                cancellationToken: _ct,
+                replyMarkup: replyMarkup
+                );
+        }
+
+        public async Task<Message> SendOrdinaryMenuForAdminAsync(long chatId)
+        {
+            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(
+                DrawMainMenu().Append(new KeyboardButton[] { MenuMessages.CHOOSE_MENU })
+                )
+            { ResizeKeyboard = true };
+
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Выберите пункт меню",
+                cancellationToken: _ct,
+                replyMarkup: replyMarkup
+                );
+        }
+
+        public async Task<Message> SendReadyToProcessPDFSchedules(long chatId)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Отправьте PDF файлы расписаний учебным групп. (Можно несколько сразу).",
+                cancellationToken: _ct,
+                replyMarkup: DrawBackKeyboard()
+                );
+        }
+
+        public async Task<Message> SendWrongFileForSchedule(long chatId)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Неверный формат файла. Файл расписаний учебных групп должен быть в формате PDF.",
+                cancellationToken: _ct,
+                replyMarkup: DrawBackKeyboard()
+                );
         }
     }
 }

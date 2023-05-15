@@ -18,7 +18,7 @@ namespace University.DLL.Sqlite
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite($"Data Source={DataConfig.DataFolderPath}UNIVERSITY.db");
+            optionsBuilder.UseSqlite($"Data Source={DataConfig.DATA_FOLDER_PATH}UNIVERSITY.db");
         }
     }
 }

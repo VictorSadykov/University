@@ -25,6 +25,8 @@ namespace University.Bot
         private IExamRepository _examRepo;
         private ICorpusRepository _corpusRepo;
         private ChatDataController _chatController = new ChatDataController();
+        private AdminController _adminController = new AdminController();
+        private ScheduleLoader _scheduleController = new ScheduleLoader();
 
         public BotService(
             ITelegramBotClient telegramClient, 
@@ -79,10 +81,17 @@ namespace University.Bot
             {
                 case MenuType.Start: // Отрисовка стартового меню
                     {
-                        await messanger.SendMainMenuAsync(chatId);
 
-                        _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-
+                        if (_adminController.IsAdmin(update.Message.From.Username)) // Проверка является ли пользователь админом
+                        {
+                           await messanger.SendChooseMenuAsync(chatId);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+                        }
+                        else
+                        {
+                            await messanger.SendMainMenuAsync(chatId);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                        }
                         break;
                     }
 
@@ -95,22 +104,6 @@ namespace University.Bot
 
                         }
                         break;
-                        // Вернуться в главное меню
-/*
-
-                        List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
-
-                        if (groups is null)
-                        {
-                            await messanger.GroupIsNotFoundMessageAsync(chatId);
-                        }
-                        else
-                        {
-                            List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groups.FirstOrDefault().Name).Result);
-                            await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groups.FirstOrDefault().Name, DateTime.Now);
-                        }
-
-                        break;*/
                     }
 
 
@@ -229,6 +222,72 @@ namespace University.Bot
                         break;
                     }
 
+                case MenuType.ChooseMenu:
+                    {
+                        switch (text)
+                        {
+                            case MenuMessages.ENTER_ADMIN_MENU:
+                                await messanger.SendAdminMainMenuAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                                break;
+                            case MenuMessages.ENTER_ORD_MENU:
+                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        break;
+                    }
+
+                case MenuType.AdminMainMenu:
+                    {
+                        switch (text)
+                        {
+                            case MenuMessages.ADMIN_LOAD_SCHEDULE:
+                                await messanger.SendReadyToProcessPDFSchedules(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadSchedule, chatData);
+                                break;
+                            case MenuMessages.CHOOSE_MENU:
+                                await messanger.SendChooseMenuAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+
+                case MenuType.AdminLoadSchedule:
+                    {
+                        if (text == MenuMessages.BACK)
+                        {
+                            await messanger.SendAdminMainMenuAsync(chatId);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                        }
+
+                        if (update.Message.Type == MessageType.Document)
+                        {
+                            if (update.Message.Document.FileName.Contains(".pdf"))
+                            {
+                                Document documentToDownload = update.Message.Document;
+                                string pathDownload = DataConfig.DATA_FOLDER_PATH + "/schedules/PDF/" + documentToDownload.FileName;
+
+                                DownloadFile(documentToDownload, pathDownload, cancellationToken);
+
+                                _scheduleController.AddSchedule(pathDownload);
+                            }
+                            else
+                            {
+                                await messanger.SendWrongFileForSchedule(chatId);
+                            }
+                        }
+
+                        break;
+                    }
+
                 case MenuType.MainMenu:
                     {
                         switch (text)
@@ -289,13 +348,21 @@ namespace University.Bot
                                 await messanger.SendMainMenuAsync(chatId);
 
                                 break;
+
+                            case MenuMessages.CHOOSE_MENU:
+
+                                if (_adminController.IsAdmin(update.Message.From.Username))
+                                {
+                                    await messanger.SendChooseMenuAsync(chatId);
+                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+                                }
+
+                                break;
                             default:
                                 break;
                         }
 
-                        break;
-
-                        
+                        break;                        
                     }
             }
 
@@ -329,6 +396,18 @@ namespace University.Bot
 
             await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groupName, DateTime.Now);
             _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
+        }
+        public async void DownloadFile(Document document, string path, CancellationToken cancellationToken)
+        {
+            Telegram.Bot.Types.File file = await _telegramClient.GetFileAsync(document.FileId, cancellationToken);            
+
+            await using Stream fileStream = System.IO.File.Create(path);
+
+            await _telegramClient.DownloadFileAsync(
+            filePath: file.FilePath,
+                destination: fileStream,
+                cancellationToken: cancellationToken
+                );
         }
     }
 }

@@ -15,6 +15,9 @@ namespace University.Common
         LessonScheduleForWeek,
         PracticeSchedule,
         ExamSchedule,
-        InsertingGroupName
+        InsertingGroupName,
+        ChooseMenu,
+        AdminMainMenu,
+        AdminLoadSchedule
     }
 }
