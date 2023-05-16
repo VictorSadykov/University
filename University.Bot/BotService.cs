@@ -26,20 +26,22 @@ namespace University.Bot
         private ICorpusRepository _corpusRepo;
         private ChatDataController _chatController = new ChatDataController();
         private AdminController _adminController = new AdminController();
-        private ScheduleLoader _scheduleController = new ScheduleLoader();
+        private ScheduleLoader _scheduleController;
 
         public BotService(
             ITelegramBotClient telegramClient, 
             IGroupRepository groupRepo, 
             ILessonRepository lessonRepo,
             IExamRepository examRepo,
-            ICorpusRepository corpusRepo)
+            ICorpusRepository corpusRepo,
+            ScheduleLoader scheduleLoader)
         {
             _telegramClient = telegramClient;
             _groupRepo = groupRepo;
             _lessonRepo = lessonRepo;
             _examRepo = examRepo;
             _corpusRepo = corpusRepo;
+            _scheduleController = scheduleLoader;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -191,7 +193,7 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            GoToMainMenu(messanger, chatId, chatData);
+                            await GoToMainMenu(messanger, chatId, chatData);
                             _chatController.UpdateNextMenuById(chatId, null, chatData);
                             break;
                         }
@@ -209,7 +211,7 @@ namespace University.Bot
                             switch (chatData.NextMenu)
                             {
                                 case MenuType.LessonScheduleForToday:
-                                    GoToTodaySchedule(messanger, chatId, chatData, text);
+                                    await GoToTodaySchedule(messanger, chatId, chatData, text);
                                     _chatController.UpdateNextMenuById(chatId, null, chatData);
 
                                     break;
@@ -268,22 +270,36 @@ namespace University.Bot
                             _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
                         }
 
-                        if (update.Message.Type == MessageType.Document)
+                        if (text.StartsWith("https://timetable.pallada.sibsau.ru/timetable/"))
+                        {
+                            await _scheduleController.AddScheduleAsync(text);
+
+                        }
+                        else
+                        {
+                            await messanger.SendWrongFileForSchedule(chatId);
+
+                        }
+
+
+                        
+
+                        /*if (update.Message.Type == MessageType.Document)
                         {
                             if (update.Message.Document.FileName.Contains(".pdf"))
                             {
                                 Document documentToDownload = update.Message.Document;
                                 string pathDownload = DataConfig.DATA_FOLDER_PATH + "/schedules/PDF/" + documentToDownload.FileName;
 
-                                DownloadFile(documentToDownload, pathDownload, cancellationToken);
+                                await DownloadFileAsync(documentToDownload, pathDownload, cancellationToken);
 
-                                _scheduleController.AddSchedule(pathDownload);
+                                await _scheduleController.AddScheduleAsync(pathDownload);
                             }
                             else
                             {
                                 await messanger.SendWrongFileForSchedule(chatId);
                             }
-                        }
+                        }*/
 
                         break;
                     }
@@ -304,7 +320,7 @@ namespace University.Bot
                                 }
                                 else
                                 {
-                                    GoToTodaySchedule(messanger, chatId, chatData, groupName);
+                                    await GoToTodaySchedule(messanger, chatId, chatData, groupName);
                                 }
 
                                 /*if (_chatController.GetGroupNameFromChatData(chatId) is null)
@@ -384,30 +400,32 @@ namespace University.Bot
            return Task.CompletedTask;        
         }
 
-        public async void GoToMainMenu(Messanger messager, long chatId, ChatData chatData)
+        public async Task GoToMainMenu(Messanger messager, long chatId, ChatData chatData)
         {
             _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
             await messager.SendMainMenuAsync(chatId);
         }
 
-        public async void GoToTodaySchedule(Messanger messanger, long chatId, ChatData chatData, string groupName)
+        public async Task GoToTodaySchedule(Messanger messanger, long chatId, ChatData chatData, string groupName)
         {
             List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groupName).Result);
 
             await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groupName, DateTime.Now);
             _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
         }
-        public async void DownloadFile(Document document, string path, CancellationToken cancellationToken)
+        public async Task DownloadFileAsync(Document document, string path, CancellationToken cancellationToken)
         {
-            Telegram.Bot.Types.File file = await _telegramClient.GetFileAsync(document.FileId, cancellationToken);            
+            Telegram.Bot.Types.File file = await _telegramClient.GetFileAsync(document.FileId, cancellationToken);
+            
 
-            await using Stream fileStream = System.IO.File.Create(path);
-
-            await _telegramClient.DownloadFileAsync(
-            filePath: file.FilePath,
+            using (Stream fileStream = new FileStream(path, FileMode.Create))
+            {
+                await _telegramClient.DownloadFileAsync(
+                filePath: file.FilePath,
                 destination: fileStream,
                 cancellationToken: cancellationToken
-                );
+                    );
+            }
         }
     }
 }

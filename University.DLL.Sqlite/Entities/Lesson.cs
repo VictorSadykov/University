@@ -18,7 +18,7 @@ namespace University.DLL.Sqlite.Entities
         public string CabNumber { get; set; }
         public int CorpusId { get; set; }
         public Corpus Corpus { get; set; }
-        public List<Group> Groups { get; set; }
+        public List<SubGroup> SubGroups { get; set; }
     }
 
     public enum LessonType

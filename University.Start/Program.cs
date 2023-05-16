@@ -32,6 +32,7 @@ namespace University.Start
                 services.AddSingleton<ILessonRepository, LessonRepository>();
 
                 services.AddTransient<ChatDataController>();
+                services.AddTransient<ScheduleLoader>();
 
 
                 services.AddSingleton<ITelegramBotClient>(provider => new TelegramBotClient(
