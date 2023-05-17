@@ -248,7 +248,23 @@ namespace University.Bot
                     new KeyboardButton[] {MenuMessages.WATCH_EXAM_SCHEDULE},
                     new KeyboardButton[] {MenuMessages.WATCH_PRACTICE_SCHEDULE},
                     new KeyboardButton[] {MenuMessages.WATCH_CORPUS_INFO},
+                    new KeyboardButton[] {MenuMessages.WATCH_HEAD_INFO},
+
                 };
+        }
+
+        private ReplyKeyboardMarkup DrawAdminMainMenu()
+        {
+            return new ReplyKeyboardMarkup(new[]
+            {
+                new KeyboardButton[] {MenuMessages.ADMIN_LOAD_SCHEDULE},
+                new KeyboardButton[] {MenuMessages.ADMIN_LOAD_HEAD_INFO},
+                new KeyboardButton[] { MenuMessages.ADMIN_LOAD_CORPUS_INFO },
+                new KeyboardButton[] { MenuMessages.CHOOSE_MENU }
+            })
+            {
+                ResizeKeyboard = true
+            };
         }
 
         public async Task<Message> SendOneDayScheduleAsync(long chatId, List<Lesson> lessons, string groupName, DateTime dateTime)
@@ -382,21 +398,14 @@ namespace University.Bot
 
         public async Task<Message> SendAdminMainMenuAsync(long chatId)
         {
-            ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
-            {
-                new KeyboardButton[] {MenuMessages.ADMIN_LOAD_SCHEDULE},
-                new KeyboardButton[] {MenuMessages.CHOOSE_MENU}
-            })
-            {
-                ResizeKeyboard = true
-            };
+            
 
 
             return await _telegramClient.SendTextMessageAsync(
                 chatId,
                 text: "Выберите пункт меню",
                 cancellationToken: _ct,
-                replyMarkup: replyMarkup
+                replyMarkup: DrawAdminMainMenu()
                 );
         }
 
@@ -416,11 +425,11 @@ namespace University.Bot
                 );
         }
 
-        public async Task<Message> SendReadyToProcessPDFSchedules(long chatId)
+        public async Task<Message> SendReadyToProcessSchedules(long chatId)
         {
             return await _telegramClient.SendTextMessageAsync(
                 chatId,
-                text: "Отправьте PDF файлы расписаний учебным групп. (Можно несколько сразу).",
+                text: "Отправьте ссылку на расписание учебным групп. (Можно несколько сразу).",
                 cancellationToken: _ct,
                 replyMarkup: DrawBackKeyboard()
                 );
@@ -430,9 +439,98 @@ namespace University.Bot
         {
             return await _telegramClient.SendTextMessageAsync(
                 chatId,
-                text: "Неверный формат файла. Файл расписаний учебных групп должен быть в формате PDF.",
+                text: "Неверный формат ссылки. Ссылка должна начинаться на \"https://timetable.pallada.sibsau.ru/timetable/\"",
                 cancellationToken: _ct,
                 replyMarkup: DrawBackKeyboard()
+                );
+        }
+
+        public async Task<Message> SendGroupAddedMessage(long chatId, string groupName)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Новая группа добавлена: " + groupName,
+                cancellationToken: _ct,
+                replyMarkup: DrawBackKeyboard()
+                );
+        }
+
+        public async Task<Message> SendScheduleAddedMessage(long chatId, string groupName)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Добавлено расписание для группы " + groupName,
+                cancellationToken: _ct,
+                replyMarkup: DrawBackKeyboard()
+                );
+        }
+
+        public async Task<Message> SendReadyToProcessHeadInfo(long chatId)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Отправьте txt файл с информацией о кафедре.",
+                cancellationToken: _ct,
+                replyMarkup: DrawBackKeyboard()
+                );
+        }
+
+        public async Task<Message> SendReadyToProcessCorpusInfo(long chatId)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Отправьте txt файл с информацией о корпусах.",
+                cancellationToken: _ct,
+                replyMarkup: DrawBackKeyboard()
+                );
+        }
+
+        public async Task<Message> SendInfoHeadSuccess(long chatId)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Информация о кафедре загружена.",
+                cancellationToken: _ct,
+                replyMarkup: DrawAdminMainMenu()
+                );
+        }
+
+        public async Task<Message> SendInfoCorpusSuccess(long chatId)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "Информация о корпусах загружена.",
+                cancellationToken: _ct,
+                replyMarkup: DrawAdminMainMenu()
+                );
+        }
+
+        public async Task<Message> SendInfo(string text, long chatId, bool isAdmin)
+        {
+            ReplyKeyboardMarkup replyKeyboard ;
+
+            if (isAdmin)
+            {
+                replyKeyboard = new ReplyKeyboardMarkup(
+                DrawMainMenu().Append(new KeyboardButton[] { MenuMessages.CHOOSE_MENU })
+                )
+                { ResizeKeyboard = true };
+            }
+            else
+            {
+                replyKeyboard = new ReplyKeyboardMarkup(
+                DrawMainMenu()
+                )
+                { ResizeKeyboard = true };
+            }
+
+            
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: text,
+                cancellationToken: _ct,
+                replyMarkup: replyKeyboard
                 );
         }
     }

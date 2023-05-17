@@ -14,6 +14,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
 using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
+using System.Drawing.Drawing2D;
 
 namespace University.Bot
 {
@@ -23,9 +24,9 @@ namespace University.Bot
         private IGroupRepository _groupRepo;
         private ILessonRepository _lessonRepo;
         private IExamRepository _examRepo;
-        private ICorpusRepository _corpusRepo;
         private ChatDataController _chatController = new ChatDataController();
         private AdminController _adminController = new AdminController();
+        private InfoController _infoController = new InfoController();
         private ScheduleLoader _scheduleController;
 
         public BotService(
@@ -33,14 +34,12 @@ namespace University.Bot
             IGroupRepository groupRepo, 
             ILessonRepository lessonRepo,
             IExamRepository examRepo,
-            ICorpusRepository corpusRepo,
             ScheduleLoader scheduleLoader)
         {
             _telegramClient = telegramClient;
             _groupRepo = groupRepo;
             _lessonRepo = lessonRepo;
             _examRepo = examRepo;
-            _corpusRepo = corpusRepo;
             _scheduleController = scheduleLoader;
         }
 
@@ -99,7 +98,12 @@ namespace University.Bot
 
                 case MenuType.LessonScheduleForToday:
                     {
-                        if (text == MenuMessages.BACK)
+                        if (_adminController.IsAdmin(update.Message.From.Username))
+                        {
+                            await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                        }
+                        else
                         {
                             _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                             await messanger.SendMainMenuAsync(chatId);
@@ -115,8 +119,17 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            await messanger.SendMainMenuAsync(chatId);
+                            if (_adminController.IsAdmin(update.Message.From.Username))
+                            {
+                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            }
+                            else
+                            {
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                await messanger.SendMainMenuAsync(chatId);
+
+                            }
                             break;
                         }                        
 
@@ -145,8 +158,17 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            await messanger.SendMainMenuAsync(chatId);
+                            if (_adminController.IsAdmin(update.Message.From.Username))
+                            {
+                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            }
+                            else
+                            {
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                await messanger.SendMainMenuAsync(chatId);
+
+                            }
 
                             break;
                         }
@@ -169,8 +191,17 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            await messanger.SendMainMenuAsync(chatId);
+                            if (_adminController.IsAdmin(update.Message.From.Username))
+                            {
+                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            }
+                            else
+                            {
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                await messanger.SendMainMenuAsync(chatId);
+
+                            }
 
                             break;
                         }
@@ -193,8 +224,17 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            await GoToMainMenu(messanger, chatId, chatData);
-                            _chatController.UpdateNextMenuById(chatId, null, chatData);
+                            if (_adminController.IsAdmin(update.Message.From.Username))
+                            {
+                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            }
+                            else
+                            {
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                await messanger.SendMainMenuAsync(chatId);
+
+                            }
                             break;
                         }
 
@@ -249,8 +289,16 @@ namespace University.Bot
                         switch (text)
                         {
                             case MenuMessages.ADMIN_LOAD_SCHEDULE:
-                                await messanger.SendReadyToProcessPDFSchedules(chatId);
+                                await messanger.SendReadyToProcessSchedules(chatId);
                                 _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadSchedule, chatData);
+                                break;
+                            case MenuMessages.ADMIN_LOAD_CORPUS_INFO:
+                                await messanger.SendReadyToProcessCorpusInfo(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadCorpusInfo, chatData);
+                                break;
+                            case MenuMessages.ADMIN_LOAD_HEAD_INFO:
+                                await messanger.SendReadyToProcessHeadInfo(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadHeadInfo, chatData);
                                 break;
                             case MenuMessages.CHOOSE_MENU:
                                 await messanger.SendChooseMenuAsync(chatId);
@@ -269,17 +317,27 @@ namespace University.Bot
                             await messanger.SendAdminMainMenuAsync(chatId);
                             _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
                         }
-
-                        if (text.StartsWith("https://timetable.pallada.sibsau.ru/timetable/"))
-                        {
-                            await _scheduleController.AddScheduleAsync(text);
-
-                        }
                         else
                         {
-                            await messanger.SendWrongFileForSchedule(chatId);
+                            if (text.StartsWith("https://timetable.pallada.sibsau.ru/timetable/"))
+                            {
+                                (string groupName, bool isGroupNew) = await _scheduleController.AddScheduleAsync(text);
 
+                                if (isGroupNew)
+                                {
+                                    await messanger.SendGroupAddedMessage(chatId, groupName);
+                                }
+
+                                await messanger.SendScheduleAddedMessage(chatId, groupName);
+                            }
+                            else
+                            {
+                                await messanger.SendWrongFileForSchedule(chatId);
+
+                            }
                         }
+
+                        
 
 
                         
@@ -300,6 +358,60 @@ namespace University.Bot
                                 await messanger.SendWrongFileForSchedule(chatId);
                             }
                         }*/
+
+                        break;
+                    }
+
+                case MenuType.AdminLoadCorpusInfo:
+                    {
+                        if (text == MenuMessages.BACK)
+                        {
+                            await messanger.SendAdminMainMenuAsync(chatId);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                        }
+                        else
+                        {
+                            if (update.Message.Type == MessageType.Document)
+                            {
+                                var fileInfo = await _telegramClient.GetFileAsync(update.Message.Document.FileId);
+
+                                var filePath = DataConfig.DATA_FOLDER_PATH + "info/corpus.txt";
+
+                                await DownloadFileAsync(update.Message.Document, filePath, cancellationToken);
+
+                                await messanger.SendInfoCorpusSuccess(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                            }
+                        }
+
+                        
+
+                        break;
+                    }
+
+                case MenuType.AdminLoadHeadInfo:
+                    {
+                        if (text == MenuMessages.BACK)
+                        {
+                            await messanger.SendAdminMainMenuAsync(chatId);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                        }
+                        else
+                        {
+                            if (update.Message.Type == MessageType.Document)
+                            {
+                                var fileInfo = await _telegramClient.GetFileAsync(update.Message.Document.FileId);
+
+                                var filePath = DataConfig.DATA_FOLDER_PATH + "info/head.txt";
+
+                                await DownloadFileAsync(update.Message.Document, filePath, cancellationToken);
+
+                                await messanger.SendInfoHeadSuccess(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                            }
+                        }
+
+
 
                         break;
                     }
@@ -358,13 +470,19 @@ namespace University.Bot
 
                             case MenuMessages.WATCH_CORPUS_INFO:
 
-                                List<Corpus>? corpuses = await Task.Run(() => _corpusRepo.GetAllAsync().Result);
-
-                                await messanger.SendCorpusInfo(chatId, corpuses);
-                                await messanger.SendMainMenuAsync(chatId);
+                                string corpusMessage = await _infoController.GetCorpusInfo();
+                                await messanger.SendInfo(corpusMessage, chatId, _adminController.IsAdmin(update.Message.From.Username));
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
 
                                 break;
 
+                            case MenuMessages.WATCH_HEAD_INFO:
+                                string headMessage = await _infoController.GetHeadInfo();
+                                await messanger.SendInfo(headMessage, chatId, _adminController.IsAdmin(update.Message.From.Username));
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+
+
+                                break;
                             case MenuMessages.CHOOSE_MENU:
 
                                 if (_adminController.IsAdmin(update.Message.From.Username))

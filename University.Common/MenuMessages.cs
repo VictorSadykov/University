@@ -16,10 +16,13 @@ namespace University.Common
         public const string WATCH_PRACTICE_SCHEDULE = "Посмотреть расписание практики.";
         public const string WATCH_EXAM_SCHEDULE = "Посмотреть расписание сессии.";
         public const string WATCH_CORPUS_INFO = "Посмотреть информацию о корпусах.";
+        public const string WATCH_HEAD_INFO = "Посмотреть информацию о кафедре.";
         public const string ENTER_ADMIN_MENU = "Войти в меню админа.";
         public const string ENTER_ORD_MENU = "Войти в обычное меню.";
         public const string ADMIN_LOAD_SCHEDULE = "Загрузить расписание группы.";
         public const string CHOOSE_MENU = "Выйти к выбору меню.";
+        public const string ADMIN_LOAD_HEAD_INFO = "Загрузить информацию о кафедре.";
+        public const string ADMIN_LOAD_CORPUS_INFO = "Загрузить информацию о корпусах.";
 
     }
 }

@@ -32,16 +32,17 @@ namespace University.BLL
             _lessonRepo = lessonRepo;
         }
 
-        public async Task AddScheduleAsync(string link)
+        public async Task<(string groupName, bool isGroupNew)> AddScheduleAsync(string link)
         {
 
-            /*HtmlWeb web = new HtmlWeb();
-            var htmlDoc = await web.LoadFromWebAsync(link);*/
+            HtmlWeb web = new HtmlWeb();
+            var htmlDoc = await web.LoadFromWebAsync(link);
 
-            var path = @"C:\Users\Витя\YandexDisk\C#\Расписание БВТ22-01.html";
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.Load(path);
-
+            /* var path = @"C:\Users\Витя\YandexDisk\C#\Расписание БВТ22-01.html";
+             var htmlDoc = new HtmlDocument();
+             htmlDoc.Load(path);
+ */
+            bool isGroupNew = false;
             string groupName = ExtractGroupName(htmlDoc); // Получение имени группы
 
             var scheduleСontainerNode = htmlDoc.GetElementbyId("timetable_tab"); // Элемент расписания
@@ -61,6 +62,7 @@ namespace University.BLL
             {
                 await _groupRepo.Add(groupName);
                 group = await _groupRepo.FindByName(groupName);
+                isGroupNew = true;
             }
 
             await _groupRepo.ResetLessonSchedule(group);
@@ -80,6 +82,7 @@ namespace University.BLL
                 }
             }
 
+            return (groupName, isGroupNew);
         }
 
         private List<List<List<Lesson>>> ExtractWeekScheduleFromNode(HtmlNode weekNode)
@@ -276,8 +279,17 @@ namespace University.BLL
 
             /*innertext = &quot;А20-01&quot;
             2 семестр 2022 - 2023г.*/
+            string sep;
+            if (node.InnerText.Contains("&quot;"))
+            {
+                sep = "&quot;";
+            }
+            else
+            {
+                sep = "\"";
+            }
 
-            string[] strings = node.InnerText.Split("\"");
+            string[] strings = node.InnerText.Split(sep);
 
             return strings[1];
         }

@@ -18,6 +18,8 @@ namespace University.Common
         InsertingGroupName,
         ChooseMenu,
         AdminMainMenu,
-        AdminLoadSchedule
+        AdminLoadSchedule,
+        AdminLoadHeadInfo,
+        AdminLoadCorpusInfo
     }
 }
