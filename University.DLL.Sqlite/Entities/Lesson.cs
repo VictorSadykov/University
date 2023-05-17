@@ -16,9 +16,11 @@ namespace University.DLL.Sqlite.Entities
         public int WeekNumber { get; set; }
         public string TeacherFullName { get; set; }
         public string CabNumber { get; set; }
-        public int CorpusId { get; set; }
-        public Corpus Corpus { get; set; }
-        public List<SubGroup> SubGroups { get; set; }
+        public string CorpusLetter { get; set; }
+        public string SubGroup { get; set; }
+        public int GroupId { get; set; }
+        public Group Group { get; set; }
+
     }
 
     public enum LessonType

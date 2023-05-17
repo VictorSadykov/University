@@ -142,36 +142,36 @@ namespace University.Bot
                 switch (lesson.TimeNumber)
                 {
                     case 1:
-                        timeStart = ScheduleTimings.FIRST_START;
-                        timeEnd = ScheduleTimings.FIRST_END;
+                        timeStart = ScheduleTimer.FIRST_START;
+                        timeEnd = ScheduleTimer.FIRST_END;
                         break;
                     case 2:
-                        timeStart = ScheduleTimings.SECOND_START;
-                        timeEnd = ScheduleTimings.SECOND_END;
+                        timeStart = ScheduleTimer.SECOND_START;
+                        timeEnd = ScheduleTimer.SECOND_END;
                         break;
                     case 3:
-                        timeStart = ScheduleTimings.THIRD_START;
-                        timeEnd = ScheduleTimings.THIRD_END;
+                        timeStart = ScheduleTimer.THIRD_START;
+                        timeEnd = ScheduleTimer.THIRD_END;
                         break;
                     case 4:
-                        timeStart = ScheduleTimings.FOURTH_START;
-                        timeEnd = ScheduleTimings.FOURTH_END;
+                        timeStart = ScheduleTimer.FOURTH_START;
+                        timeEnd = ScheduleTimer.FOURTH_END;
                         break;
                     case 5:
-                        timeStart = ScheduleTimings.FIFTH_START;
-                        timeEnd = ScheduleTimings.FIFTH_END;
+                        timeStart = ScheduleTimer.FIFTH_START;
+                        timeEnd = ScheduleTimer.FIFTH_END;
                         break;
                     case 6:
-                        timeStart = ScheduleTimings.SIXTH_START;
-                        timeEnd = ScheduleTimings.SIXTH_END;
+                        timeStart = ScheduleTimer.SIXTH_START;
+                        timeEnd = ScheduleTimer.SIXTH_END;
                         break;
                     case 7:
-                        timeStart = ScheduleTimings.SEVENTH_START;
-                        timeEnd = ScheduleTimings.SEVENTH_END;
+                        timeStart = ScheduleTimer.SEVENTH_START;
+                        timeEnd = ScheduleTimer.SEVENTH_END;
                         break;
                     case 8:
-                        timeStart = ScheduleTimings.EIGHTH_START;
-                        timeEnd = ScheduleTimings.EIGHTH_END;
+                        timeStart = ScheduleTimer.EIGHTH_START;
+                        timeEnd = ScheduleTimer.EIGHTH_END;
                         break;
                     default:
                         break;
@@ -184,7 +184,7 @@ namespace University.Bot
                 output += $"⏲ {timeStart} - {timeEnd}{Environment.NewLine}" +
                     $"{emoji} {lesson.Name}({lessonAlias}){Environment.NewLine}" +
                     $"👩‍🏫 {lesson.TeacherFullName}{Environment.NewLine}" +
-                    $"🏫 корп. \"{lesson.Corpus.Name}\" каб. \"{lesson.CabNumber}\"{Environment.NewLine}{Environment.NewLine}";
+                    $"🏫 корп. \"{lesson.CorpusLetter}\" каб. \"{lesson.CabNumber}\"{Environment.NewLine}{Environment.NewLine}";
                     
 
             }

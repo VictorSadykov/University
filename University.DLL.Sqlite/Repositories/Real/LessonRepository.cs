@@ -29,7 +29,6 @@ namespace University.DLL.Sqlite.Repositories.Real
         public async Task<List<Lesson>> GetAllLessonByGroupNameAsync(string groupName)
         {
             return await _dbContext.Lessons
-                .Include(l => l.Corpus)
                 /*.Include(l => l.Groups)
                 .Where(l => l.Groups
                     .Any(g => g.Name == groupName)

@@ -10,6 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using University.Common;
+using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
 
 namespace University.BLL
@@ -34,44 +35,251 @@ namespace University.BLL
         public async Task AddScheduleAsync(string link)
         {
 
-            HtmlWeb web = new HtmlWeb();
-            var htmlDoc = await web.LoadFromWebAsync(link);
+            /*HtmlWeb web = new HtmlWeb();
+            var htmlDoc = await web.LoadFromWebAsync(link);*/
 
-            var timeTableNode = htmlDoc.GetElementbyId("timetable_tab"); // Элемент расписания
+            var path = @"C:\Users\Витя\YandexDisk\C#\Расписание БВТ22-01.html";
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.Load(path);
+
+            string groupName = ExtractGroupName(htmlDoc); // Получение имени группы
+
+            var scheduleСontainerNode = htmlDoc.GetElementbyId("timetable_tab"); // Элемент расписания
+
+            var scheduleWeekNodes = scheduleСontainerNode.SelectNodes("./div/div");
+
+            var weekSchedules = new List<List<List<Lesson>>>[scheduleWeekNodes.Count];
+
+            for (int i = 0; i < scheduleWeekNodes.Count; i++)
+            {
+                weekSchedules[i] = ExtractWeekScheduleFromNode(scheduleWeekNodes[i]);
+            }
+
+            DLL.Sqlite.Entities.Group group = await _groupRepo.FindByName(groupName);
+
+            if (group is null)
+            {
+                await _groupRepo.Add(groupName);
+                group = await _groupRepo.FindByName(groupName);
+            }
+
+            await _groupRepo.ResetLessonSchedule(group);
+
+            foreach (var week in weekSchedules)
+            {
+                foreach (var day in week)
+                {
+                    foreach (var time in day)
+                    {
+                        foreach (var lesson in time)
+                        {
+                            lesson.Group = group;
+                            await _groupRepo.AddLesson(group, lesson);                            
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private List<List<List<Lesson>>> ExtractWeekScheduleFromNode(HtmlNode weekNode)
+        {
+            var weekSchedule = new List<List<List<Lesson>>>();
+
+            string idValue = weekNode.Attributes
+                .Where(atr => atr.Name == "id")
+                .FirstOrDefault()
+                .Value; // week_2_tab
+
+            int weekNumber = int.Parse(idValue.Split("_")[1]);
+            var dayNodes = weekNode.ChildNodes.Where(cn => cn.Name != "#text").ToList();
+            foreach (var dayNode in dayNodes)
+            {
+                weekSchedule.Add(ExtractDayScheduleFromNode(dayNode, weekNumber));
+            }
+
+            return weekSchedule;
+        }
+
+        private List<List<Lesson>> ExtractDayScheduleFromNode(HtmlNode dayNode, int weekNumber)
+        {
+            var daySchedule = new List<List<Lesson>>();
+
+            string classValue = dayNode.Attributes
+                .Where(atr => atr.Name == "class")
+                .FirstOrDefault()
+                .Value;
+
+            string dayOfWeekName = classValue.Split(" ")[1];
+            int dayOfWeekNumber = 0;
+
+            switch (dayOfWeekName)
+            {
+                case "monday": 
+                    dayOfWeekNumber = 1;
+                    break;
+                case "tuesday": 
+                    dayOfWeekNumber = 2;
+                    break;
+                case "wednesday":
+                    dayOfWeekNumber = 3;
+                    break;
+                case "thursday": 
+                    dayOfWeekNumber = 4;
+                    break;
+                case "friday": 
+                    dayOfWeekNumber = 5;
+                    break;
+                case "saturday": 
+                    dayOfWeekNumber = 6;
+                    break;
+                default:
+                    break;
+            }
+
+            var lessonNodes = dayNode.SelectNodes(".//div[@class=\"line\"]");
+
+            foreach (var lessonNode in lessonNodes)
+            {
+                daySchedule.Add(ExtractLessonListFromOneTimeZone(lessonNode, weekNumber, dayOfWeekNumber));
+            }
+
+            return daySchedule;
+        }
+
+        private List<Lesson> ExtractLessonListFromOneTimeZone(HtmlNode lessonNode, int weekNumber, int dayOfWeekNumber)
+        {
+            var lessonInfoInOneTimeZone = new List<Lesson>();
+            var timeNode = lessonNode.SelectSingleNode("./div[contains(@class, \"time\")]/div[2]");
+            int timeNumber = ExtractTimeNumber(timeNode);
+
+            var lessonInfoNodes = lessonNode.SelectNodes("./div[@class=\"discipline\"]//ul"); // Информация о занятиях множества подгрупп группы.
+            // Может быть листом с 1 элементом, если все подгруппы идут на одно занятие
+            // Может быть листом с несколькими элементами, если каждая подгруппа идёт на 1 занятие
+            // Может быть листом с несколькими элементами, если каждая подгруппа идёт на множество занятий
+                    
+
+            foreach (var lessonUl in lessonInfoNodes)
+            {
+                lessonInfoInOneTimeZone.Add(ExtractSingleLesson(lessonUl, weekNumber, dayOfWeekNumber, timeNumber));
+            }
+
+
+            return lessonInfoInOneTimeZone;
+        }
+
+        private Lesson ExtractSingleLesson(HtmlNode lessonUlNode, int weekNumber, int dayOfWeekNumber, int timeNumber)
+        {
+            (string lessonName, LessonType lessonType) = ExtractLessonNameAndType(lessonUlNode);
+            string teacherName = ExtractTeacherName(lessonUlNode);
+            (string corpusLetter, string cabNumber) = ExtractCorpusLetterAndCabNumber(lessonUlNode);
+            string subGroupName = ExtractSubGroupName(lessonUlNode);
+
+            return new Lesson()
+            {
+                Name = lessonName,
+                LessonType = lessonType,
+                CorpusLetter = corpusLetter,
+                CabNumber = cabNumber,
+                TeacherFullName = teacherName,
+                WeekNumber = weekNumber,
+                DayNumber = (DayOfWeek)dayOfWeekNumber,
+                TimeNumber = timeNumber,
+                SubGroup = subGroupName
+            };
+        }
+
+        private string ExtractSubGroupName(HtmlNode lessonUlNode)
+        {
+            /*var liWithCorpusInfo = lessonUlNode.ChildNodes
+                .Where(cn =>
+                cn.Attributes
+                    .Any(atr => atr.Name == "class" && atr.Value.Contains("num_pdgrp"))
+                    ||
+                cn.ChildNodes
+                    .Any(gcn => gcn.Name == "i" && gcn.Attributes
+                        .Any(atr => atr.Name == "class" && atr.Value.Contains("fa-paperclip"))                    
+                    );*/
+
+            var subGroupLi = lessonUlNode.SelectSingleNode("./li[i[contains(@class, \"fa-paperclip\")]]");
+
+            if (subGroupLi is null)
+            {
+                subGroupLi = lessonUlNode.SelectSingleNode("./li[contains(@class, \"num_pdgrp\")]");
+                if (subGroupLi is null)
+                {
+                    return 0.ToString();
+                }
+            }
+
+            string subGroupName = subGroupLi.InnerText.Split(" ")[0];
+
+            return subGroupName;
+        }
+
+        private (string corpusLetter, string cabNumber) ExtractCorpusLetterAndCabNumber(HtmlNode lessonUlNode)
+        {
+            var liWithCorpusInfo = lessonUlNode.SelectSingleNode("./li[i[contains(@class, \"fa-compass\")]]");
+            string[] strings = liWithCorpusInfo.InnerText.Split(" ");
+            string corpusLetter = strings[1].Replace("\"", "");
+            string cabNumber = strings[3].Replace("\"", "");
+
+            return (corpusLetter, cabNumber);
+        }
+
+        private string ExtractTeacherName(HtmlNode lessonUlNode)
+        {
+            var liWithTeacherName = lessonUlNode.SelectSingleNode("./li[i[contains(@class, \"fa-user\")]]");
+
+            return liWithTeacherName.InnerText;
+        }
+
+        private (string lessonName, LessonType lessonType) ExtractLessonNameAndType(HtmlNode lessonUlNode)
+        {
+            var liWithLessonNameAndType = lessonUlNode.SelectSingleNode("./li[i[contains(@class, \"fa-bookmark\")]]");
+            var spanWithLessonName = liWithLessonNameAndType.SelectSingleNode("span");
+            string lessonName = spanWithLessonName.InnerText;
+
+            string lessonTypeName = liWithLessonNameAndType.InnerHtml
+                .Replace(liWithLessonNameAndType.SelectSingleNode("i").OuterHtml, "")
+                .Replace(spanWithLessonName.OuterHtml, "")
+                .Replace("<br>", "")
+                .Replace("(", "")
+                .Replace(")", "")
+                .Trim();
+
+            LessonType lessonType = lessonTypeName switch
+            {
+                "Практика" => LessonType.Practice,
+                "Лекция" => LessonType.Lecture,
+                "Лабораторная работа" => LessonType.LabWork,
+                _ => throw new Exception("Parsing lesson type error")
+            };
             
-            
 
+            return (lessonName, lessonType);
+        }
 
-            /*string excelPath = ConvertPdfToExcel(sourcePath);
+        private int ExtractTimeNumber(HtmlNode timeNode)
+        {
+            var timeString = timeNode.InnerHtml.Replace("\n", " ").Trim();
+            string[] times = timeString.Split("<br>");
+            string timeStart = times[0];
 
-            (string groupName,
-             string groupCode,
-             string groupSpecialization,
-             string groupOrientation
-             ) groupInfo = GetGroupInfoFromExcel(excelPath);
+            int timeNumber = ScheduleTimer.GetLessonNumberFromTimeStart(timeStart);
+            return timeNumber;
+        }
 
-            *//*(string groupName,
-             string groupCode,
-             string groupSpecialization,
-             string groupOrientation
-             ) groupInfo = GetGroupInfoFromExcel(@"C:\Users\Витя\YandexDisk\C#\ПРОЕКТЫ\University\Data\schedules\EXCEL\d.xlsx");*/
+        private string ExtractGroupName(HtmlDocument htmlDocument)
+        {
+            var node = htmlDocument.DocumentNode.SelectSingleNode("//body//div[@id=\"wrapwrap\"]//main//div//h3");
 
-            /*(string groupName,
-             string groupCode,
-             string groupSpecialization,
-             string groupOrientation
-             ) groupInfo = ("А20-01", "24.05.01", "Проектирование, производство и эксплуатация ракет и ракетно-космических", "Ракетные транспортные системы");*//*
+            /*innertext = &quot;А20-01&quot;
+            2 семестр 2022 - 2023г.*/
 
-            int groupOperationStatusCode = await _groupRepo.WriteOrEditAsync(groupInfo);
+            string[] strings = node.InnerText.Split("\"");
 
-            string message = groupOperationStatusCode == 0 ?
-                $"Обновлена информация существующей группы {groupInfo.groupName}" :
-                $"Добавлена информация о новой группе {groupInfo.groupName}";
-
-
-            await Test(excelPath, groupInfo.groupName);
-
-            Console.WriteLine(message);*/
+            return strings[1];
         }
 
         private async Task Test(string path, string groupName)
