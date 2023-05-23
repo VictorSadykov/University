@@ -16,7 +16,7 @@ namespace University.DLL.Sqlite.Entities
         public DateTime? PracticeDateStart { get; set; }
         public DateTime? PracticeDateEnd { get; set; }
         public string? PracticeTeacherFullName { get; set; }
-        public List<Exam>? Exams { get; set; }
-        public List<Lesson>? Lessons { get; set; }
+        public List<Exam>? Exams { get; set; } = new List<Exam>();
+        public List<Lesson>? Lessons { get; set; } = new List<Lesson>();
     }
 }

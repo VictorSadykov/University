@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "University.Start", "Univers
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "University.DLL.Sqlite", "University.DLL.Sqlite\University.DLL.Sqlite.csproj", "{F9B8FD81-CAA6-4B8A-8668-DC3E1693C76A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "University.Common", "University.Common\University.Common.csproj", "{3301B254-4701-47FE-B3D8-0EE72BC2791C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "University.Common", "University.Common\University.Common.csproj", "{3301B254-4701-47FE-B3D8-0EE72BC2791C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "University.MiniMethods", "University.MiniMethods\University.MiniMethods.csproj", "{DFDC536E-A180-44B0-92CE-4B445384D967}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{3301B254-4701-47FE-B3D8-0EE72BC2791C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3301B254-4701-47FE-B3D8-0EE72BC2791C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3301B254-4701-47FE-B3D8-0EE72BC2791C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFDC536E-A180-44B0-92CE-4B445384D967}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFDC536E-A180-44B0-92CE-4B445384D967}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFDC536E-A180-44B0-92CE-4B445384D967}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFDC536E-A180-44B0-92CE-4B445384D967}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\University.Common\University.Common.csproj" />
     <ProjectReference Include="..\University.DLL.Sqlite\University.DLL.Sqlite.csproj" />
+    <ProjectReference Include="..\University.MiniMethods\University.MiniMethods.csproj" />
   </ItemGroup>
 
 </Project>

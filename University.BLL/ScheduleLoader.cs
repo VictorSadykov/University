@@ -1,17 +1,16 @@
-﻿using Aspose.Pdf;
-using HtmlAgilityPack;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.VisualBasic;
-using OfficeOpenXml;
+﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using University.Common;
 using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
+using University.MiniMethods;
 
 namespace University.BLL
 {
@@ -24,15 +23,16 @@ namespace University.BLL
         private string excelDestPath = DataConfig.DATA_FOLDER_PATH + "schedules/EXCEL/";
         private IGroupRepository _groupRepo;
         private ILessonRepository _lessonRepo;
+        private ITeacherRepository _teacherRepo;
 
-        public ScheduleLoader(IGroupRepository groupRepo, ILessonRepository lessonRepo)
+        public ScheduleLoader(IGroupRepository groupRepo, ILessonRepository lessonRepo, ITeacherRepository teacherRepo)
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             _groupRepo = groupRepo;
             _lessonRepo = lessonRepo;
+            _teacherRepo = teacherRepo;
         }
 
-        public async Task<(string groupName, bool isGroupNew)> AddScheduleAsync(string link)
+        public async Task<(string groupName, bool isGroupNew)> AddScheduleAsync(string link, int deep = 1, List<string> totalLinks = null, List<string> unvisitedLinks = null)
         {
 
             HtmlWeb web = new HtmlWeb();
@@ -42,30 +42,78 @@ namespace University.BLL
              var htmlDoc = new HtmlDocument();
              htmlDoc.Load(path);
  */
-            bool isGroupNew = false;
-            string groupName = ExtractGroupName(htmlDoc); // Получение имени группы
+
+            bool isScheduleForGroup = link.Contains("group"); // Флаг чьё расписание мы проверяем. Проверка на основе ссылки - в расписании для группы есть подстрока "group",
+                                                              // в расписании для преподавателя - "professor"
+
+            bool isEntityNew = false; // Флаг новая ли сущность учителя или урока (не существует ли она уже в БД)
+            string entityName = null;
 
             var scheduleСontainerNode = htmlDoc.GetElementbyId("timetable_tab"); // Элемент расписания
 
-            var scheduleWeekNodes = scheduleСontainerNode.SelectNodes("./div/div");
+            var scheduleWeekNodes = scheduleСontainerNode.SelectNodes("./div[@class=\"tab-content\"]/div");
+
+           
+
+            if (isScheduleForGroup)
+            {
+                entityName = ExtractGroupName(htmlDoc);
+                if (await _groupRepo.FindByNameAsync(entityName) is null) // Проверка есть ли сущность группы в базе данных
+                {
+                    isEntityNew = true;
+                }
+            }
+            else
+            {
+                entityName = ExtractTeacherFullName(htmlDoc);
+                if (await _teacherRepo.FindByFullNameAsync(entityName) is null)
+                {
+                    isEntityNew = true;
+                }
+            }
+
 
             var weekSchedules = new List<List<List<Lesson>>>[scheduleWeekNodes.Count];
 
             for (int i = 0; i < scheduleWeekNodes.Count; i++)
             {
-                weekSchedules[i] = ExtractWeekScheduleFromNode(scheduleWeekNodes[i]);
+                weekSchedules[i] = ExtractWeekScheduleFromNode(scheduleWeekNodes[i], isScheduleForGroup);
             }
 
-            DLL.Sqlite.Entities.Group group = await _groupRepo.FindByName(groupName);
-
-            if (group is null)
+           /* if (isScheduleForGroup)
             {
-                await _groupRepo.Add(groupName);
-                group = await _groupRepo.FindByName(groupName);
-                isGroupNew = true;
-            }
+                Group? group = await _groupRepo.FindByNameAsync(entityName);
+                if (group is null)
+                {
+                    group = new Group()
+                    {
+                        Name = entityName
+                    };
 
-            await _groupRepo.ResetLessonSchedule(group);
+                    await _groupRepo.AddAsync(group);
+                }
+
+                await _groupRepo.ResetLessonScheduleAsync(group);
+            }
+            else
+            {
+                Teacher? teacher = await _teacherRepo.FindByFullNameAsync(entityName);
+
+                if (teacher is null)
+                {
+                    (string firstName, string lastName, string secondName) = FullNameParser.Parse(entityName);
+                    teacher = new Teacher()
+                    {
+                        FirstName = firstName,
+                        LastName = lastName,
+                        SecondName = secondName
+                    };
+
+                    await _teacherRepo.AddAsync(teacher);
+                }
+
+                await _teacherRepo.ResetLessonScheduleAsync(teacher);
+            }*/
 
             foreach (var week in weekSchedules)
             {
@@ -75,43 +123,77 @@ namespace University.BLL
                     {
                         foreach (var lesson in time)
                         {
-                            lesson.Group = group;
-                            await _groupRepo.AddLesson(group, lesson);                            
+
+                            if (isScheduleForGroup)
+                            {
+                                Group? foundGroup = await _groupRepo.FindByNameAsync(entityName);
+                                if (foundGroup is null)
+                                {
+                                    foundGroup = new Group() { Name = entityName };
+                                }
+
+                                if (!lesson.Groups.Contains(foundGroup))
+                                {
+                                    lesson.Groups.Add(foundGroup);
+                                }
+                            }
+                            else
+                            {
+                                Teacher? foundTeacher = await _teacherRepo.FindByFullNameAsync(entityName);
+
+                                if (foundTeacher is null)
+                                {
+                                    (string firstName, string lastName, string secondName) = FullNameParser.Parse(entityName);
+
+                                    foundTeacher = new Teacher()
+                                    {
+                                        FirstName = firstName,
+                                        LastName = lastName,
+                                        SecondName = secondName
+                                    };
+                                }
+
+                                lesson.Teacher = foundTeacher;
+                            }
+
+                            await _lessonRepo.AddAsync(lesson);
                         }
                     }
                 }
             }
+            
+            
 
-            return (groupName, isGroupNew);
+            return (entityName, isEntityNew);
         }
 
-        private List<List<List<Lesson>>> ExtractWeekScheduleFromNode(HtmlNode weekNode)
+        private List<List<List<Lesson>>> ExtractWeekScheduleFromNode(HtmlNode weekNode, bool isScheduleForGroup)
         {
             var weekSchedule = new List<List<List<Lesson>>>();
 
             string idValue = weekNode.Attributes
                 .Where(atr => atr.Name == "id")
                 .FirstOrDefault()
-                .Value; // week_2_tab
+                .Value; // поиск номера недели из атрибута id. Пример id="week_2_tab"
 
             int weekNumber = int.Parse(idValue.Split("_")[1]);
-            var dayNodes = weekNode.ChildNodes.Where(cn => cn.Name != "#text").ToList();
+            var dayNodes = weekNode.ChildNodes.Where(cn => cn.Name != "#text").ToList(); // Извлечение узлов дней расписания. Их количество равно количеству учебным дням в недели
             foreach (var dayNode in dayNodes)
             {
-                weekSchedule.Add(ExtractDayScheduleFromNode(dayNode, weekNumber));
+                weekSchedule.Add(ExtractDayScheduleFromNode(dayNode, weekNumber, isScheduleForGroup));
             }
 
             return weekSchedule;
         }
 
-        private List<List<Lesson>> ExtractDayScheduleFromNode(HtmlNode dayNode, int weekNumber)
+        private List<List<Lesson>> ExtractDayScheduleFromNode(HtmlNode dayNode, int weekNumber, bool isScheduleForGroup)
         {
             var daySchedule = new List<List<Lesson>>();
 
             string classValue = dayNode.Attributes
                 .Where(atr => atr.Name == "class")
                 .FirstOrDefault()
-                .Value;
+                .Value; // Значение атрибута class из которого можно извлечь название дня недели
 
             string dayOfWeekName = classValue.Split(" ")[1];
             int dayOfWeekNumber = 0;
@@ -144,13 +226,13 @@ namespace University.BLL
 
             foreach (var lessonNode in lessonNodes)
             {
-                daySchedule.Add(ExtractLessonListFromOneTimeZone(lessonNode, weekNumber, dayOfWeekNumber));
+                daySchedule.Add(ExtractLessonListFromOneTimeZone(lessonNode, weekNumber, dayOfWeekNumber, isScheduleForGroup));
             }
 
             return daySchedule;
         }
 
-        private List<Lesson> ExtractLessonListFromOneTimeZone(HtmlNode lessonNode, int weekNumber, int dayOfWeekNumber)
+        private List<Lesson> ExtractLessonListFromOneTimeZone(HtmlNode lessonNode, int weekNumber, int dayOfWeekNumber, bool isScheduleForGroup)
         {
             var lessonInfoInOneTimeZone = new List<Lesson>();
             var timeNode = lessonNode.SelectSingleNode("./div[contains(@class, \"time\")]/div[2]");
@@ -164,32 +246,79 @@ namespace University.BLL
 
             foreach (var lessonUl in lessonInfoNodes)
             {
-                lessonInfoInOneTimeZone.Add(ExtractSingleLesson(lessonUl, weekNumber, dayOfWeekNumber, timeNumber));
+                lessonInfoInOneTimeZone.Add(ExtractSingleLesson(lessonUl, weekNumber, dayOfWeekNumber, timeNumber, isScheduleForGroup).Result);
             }
 
 
             return lessonInfoInOneTimeZone;
         }
 
-        private Lesson ExtractSingleLesson(HtmlNode lessonUlNode, int weekNumber, int dayOfWeekNumber, int timeNumber)
+        private async Task<Lesson> ExtractSingleLesson(HtmlNode lessonUlNode, int weekNumber, int dayOfWeekNumber, int timeNumber, bool isScheduleForGroup)
         {
             (string lessonName, LessonType lessonType) = ExtractLessonNameAndType(lessonUlNode);
-            string teacherName = ExtractTeacherName(lessonUlNode);
             (string corpusLetter, string cabNumber) = ExtractCorpusLetterAndCabNumber(lessonUlNode);
             string subGroupName = ExtractSubGroupName(lessonUlNode);
 
-            return new Lesson()
+            string teacherName;
+            List<string> groupNames; // Если мы рассматриваем расписание преподавателя, он может вести занятие у нескольких групп,
+                                     // поэтому названия этих групп записываем в список
+
+
+            Lesson lesson = new Lesson()
             {
                 Name = lessonName,
                 LessonType = lessonType,
                 CorpusLetter = corpusLetter,
                 CabNumber = cabNumber,
-                TeacherFullName = teacherName,
                 WeekNumber = weekNumber,
                 DayNumber = (DayOfWeek)dayOfWeekNumber,
                 TimeNumber = timeNumber,
                 SubGroup = subGroupName
             };
+
+            if (isScheduleForGroup)
+            {
+                teacherName = ExtractTeacherNameFromSingleLesson(lessonUlNode); // Полное имя учителя, которое пишется внутри элемента урока
+                
+
+                Teacher? teacher = await _teacherRepo.FindByFullNameAsync(teacherName); // Проверяем есть ли учитель в базе данных
+
+                if (teacher is null)
+                {
+                    (string firstName, string lastName, string secondName) = FullNameParser.Parse(teacherName);
+                    teacher = new Teacher()
+                    {
+                        FirstName = firstName,
+                        LastName = lastName,
+                        SecondName = secondName,
+                    };
+                }
+
+                lesson.Teacher = teacher;
+
+            }
+            else
+            {
+                groupNames = ExtractGroupNamesFromSingleLesson(lessonUlNode);
+
+                foreach (var groupName in groupNames)
+                {
+                    Group? group = await _groupRepo.FindByNameAsync(groupName);
+
+                    if (group is null)
+                    {
+                        group = new Group
+                        {
+                            Name = groupName
+                        };
+                        //await _groupRepo.AddAsync(group);
+                    }
+
+                    lesson.Groups.Add(group);
+                }
+            }
+
+            return lesson;            
         }
 
         private string ExtractSubGroupName(HtmlNode lessonUlNode)
@@ -230,11 +359,24 @@ namespace University.BLL
             return (corpusLetter, cabNumber);
         }
 
-        private string ExtractTeacherName(HtmlNode lessonUlNode)
+        private string ExtractTeacherNameFromSingleLesson(HtmlNode lessonUlNode)
         {
             var liWithTeacherName = lessonUlNode.SelectSingleNode("./li[i[contains(@class, \"fa-user\")]]");
 
             return liWithTeacherName.InnerText;
+        }
+
+        private List<string> ExtractGroupNamesFromSingleLesson(HtmlNode lessonUlNode)
+        {
+            List<string> output = new List<string>();
+            var lisWithGroupName = lessonUlNode.SelectNodes("./li[i[contains(@class, \"fa-group\")]]");
+
+            foreach (var li in lisWithGroupName)
+            {
+                output.Add(li.InnerText);
+            }
+
+            return output;
         }
 
         private (string lessonName, LessonType lessonType) ExtractLessonNameAndType(HtmlNode lessonUlNode)
@@ -292,113 +434,18 @@ namespace University.BLL
             string[] strings = node.InnerText.Split(sep);
 
             return strings[1];
+                        
         }
 
-        private async Task Test(string path, string groupName)
+        private string ExtractTeacherFullName(HtmlDocument htmlDocument)
         {
-            string[,] strings;
-            using (var package = new ExcelPackage(path))
-            {
-                var a = package.Workbook.Worksheets[0];
-                int x = 0;
-                int y = 0;
-                string ad = null;
-                foreach (var item in a.Cells)
-                {
-                    if (item.Value?.ToString() == "I НЕДЕЛЯ")
-                    {
-                        y = item.Start.Row;
-                    }
-                }
-
-
-                strings = new string[a.Dimension.Rows - y, a.Dimension.Columns];
-
-                for (int i = 1; i <= strings.GetLength(0); i++)
-                {
-                    for (int j = 1; j <= strings.GetLength(1); j++)
-                    {
-                        strings[i - 1, j - 1] = a.Cells[i + y, j].Value?.ToString();
-                    }
-                }
-
-
-            }
-            using (var p = new ExcelPackage(@$"C:\\Users\\Витя\\YandexDisk\\C#\\ПРОЕКТЫ\\University\\Data\\schedules\\EXCEL\test\{groupName}.xlsx"))
-            {
-                var sheet = p.Workbook.Worksheets.Add(DateTime.Now.ToString());
-                for (int z = 0; z < strings.GetLength(0); z++)
-                {
-                    for (int c = 0; c < strings.GetLength(1); c++)
-                    {
-                        sheet.Cells[z + 1, c + 1].Value = strings[z, c];
-                    }
-                }
-
-                await p.SaveAsync();
-            }
-        }
-        
-
-        private (string, string,  string, string) GetGroupInfoFromExcel(string excelPath)
-        {
-            (string groupName, string groupCode, string groupSpecialization, string groupOrientation) output = (null, null, null, null);
-
-            
-
-            using (var package = new ExcelPackage(excelPath))
-            {
-                var sheet = package.Workbook.Worksheets[0];
-
-                foreach (var item in sheet.Cells)
-                {
-
-                    if (item.Value?.ToString() == "ГРУППА:")
-                    {
-                        output.groupName = sheet.Cells[item.Start.Row, item.Start.Column + 1].Value.ToString();
-                        output.groupName = output.groupName.Replace("\n", " ").Trim();
-                    }
-
-                    if (item.Value?.ToString() == "НАПРАВЛЕНИЕ:")
-                    {
-                        string[] words = sheet.Cells[item.Start.Row, item.Start.Column + 1].Value.ToString().Split(" ");
-
-                        output.groupCode = words[0];
-                        output.groupCode = output.groupCode.Replace("\n", " ").Trim();
-
-                        StringBuilder specialization = new StringBuilder();
-
-                        for (int i = 1; i < words.Length; i++)
-                        {
-                            specialization.Append(words[i] + " ");
-                        }
-
-                        output.groupSpecialization = specialization.ToString();
-                        output.groupSpecialization = output.groupSpecialization.Replace("\n", " ").Trim();
-                    }
-
-                    if (item.Value?.ToString() == "НАПРАВЛЕННОСТЬ:")
-                    {
-                        output.groupOrientation = sheet.Cells[item.Start.Row, item.Start.Column + 1].Value.ToString();
-                        output.groupOrientation = output.groupOrientation.Replace("\n", " ").Trim();
-                    }
-                }
-            }
-
+            var node = htmlDocument.DocumentNode.SelectSingleNode("//body//div[@id=\"wrapwrap\"]//main//div//h3");
+            string[] strings = node.InnerText.Split("-");
+            string output = strings[0]
+                .Replace("\n", "")
+                .Trim();
             return output;
         }
 
-        private string ConvertPdfToExcel(string pdfFilePath)
-        {
-            Document pdfDocument = new Document(pdfFilePath);
-            ExcelSaveOptions excelSaveOptions = new ExcelSaveOptions();
-            string fileName = Path.GetFileName(pdfDocument.FileName);
-            string newFileName = fileName.Replace("pdf", "xlsx");
-            string newFilePath = Path.Combine(excelDestPath, newFileName);
-
-            pdfDocument.Save(newFilePath, excelSaveOptions);
-
-            return newFilePath;
-        }
     }
 }

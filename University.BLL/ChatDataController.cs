@@ -50,7 +50,7 @@ namespace University.BLL
             return chatData;
         }
 
-        public string? GetGroupName(long chatId)
+        public string? GetSearchQueryName(long chatId)
         {
             List<ChatData>? chatDataList = _jsonService.GetObject<List<ChatData>>();
 
@@ -58,7 +58,7 @@ namespace University.BLL
                 .Where(cd => cd.ChatId == chatId)
                 .FirstOrDefault();
 
-            return chatData?.GroupName;
+            return chatData?.SearchQueryName;
         }
 
         public void UpdateNextMenuById(long chatId, MenuType? menuType, ChatData chatData)
@@ -85,13 +85,17 @@ namespace University.BLL
 
         public void UpdateCurrentMenuById(long chatId, MenuType menuType, ChatData chatData)
         {
+            if (chatData is null)
+            {
+                return;
+            }
             chatData.CurrentMenu = menuType;
             UpdateById(chatId, chatData);
         }
 
-        public void UpdateGroupName(long chatId, string groupName, ChatData chatData)
+        public void UpdateSearchQueryName(long chatId, string groupName, ChatData chatData)
         {
-            chatData.GroupName = groupName;
+            chatData.SearchQueryName = groupName;
             UpdateById(chatId, chatData);
         }
 

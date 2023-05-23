@@ -11,13 +11,17 @@ namespace University.DLL.Sqlite.Repositories.Real
 {
     public class ExamRepository : IExamRepository
     {
-        private readonly UniversityDbContext _dbContext = new UniversityDbContext();
+        private readonly UniversityDbContext _dbContext;
+
+        public ExamRepository(UniversityDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
 
         public async Task<List<Exam>?> GetExamsByGroupName(string groupName)
         {
             return await _dbContext.Exams
                 .Include(e => e.Group)
-                .Include(e => e.Corpus)
                 .Where(e => e.Group.Name == groupName)
                 .ToListAsync();
         }

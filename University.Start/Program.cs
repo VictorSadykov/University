@@ -29,10 +29,12 @@ namespace University.Start
                 services.AddSingleton<IGroupRepository, GroupRepository>();
                 services.AddSingleton<IExamRepository, ExamRepository>();
                 services.AddSingleton<ILessonRepository, LessonRepository>();
+                services.AddSingleton<ITeacherRepository, TeacherRepository>();
 
                 services.AddTransient<ChatDataController>();
                 services.AddTransient<ScheduleLoader>();
                 services.AddTransient<InfoController>();
+                services.AddTransient<Messanger>();
 
 
                 services.AddSingleton<ITelegramBotClient>(provider => new TelegramBotClient(

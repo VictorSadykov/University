@@ -9,12 +9,11 @@ namespace University.DLL.Sqlite.Repositories.Abstract
 {
     public interface IGroupRepository
     {
-        Task Add(string groupName);
-        Task AddLesson(Group group, Lesson lesson);
-        Task<Group> FindByName(string groupName);
-        Task<List<Group>?> GetAllGroupsByNameAsync(string groupName);
-        Task ResetExamSchedule(Group group);
-        Task ResetLessonSchedule(Group group);
+        Task AddAsync(Group group);
+        //Task AddLessonAsync(Group group, Lesson lesson);
+        Task<Group> FindByNameAsync(string groupName);
+        Task ResetExamScheduleAsync(Group group);
+        Task ResetLessonScheduleAsync(Group group);
         Task<int> WriteOrEditAsync((string groupName, string groupCode, string groupSpecialization, string groupOrientation) groupInfo);
     }
 }

@@ -14,7 +14,8 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
 using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
-using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace University.Bot
 {
@@ -28,19 +29,22 @@ namespace University.Bot
         private AdminController _adminController = new AdminController();
         private InfoController _infoController = new InfoController();
         private ScheduleLoader _scheduleController;
+        private Messanger _messanger;
 
         public BotService(
             ITelegramBotClient telegramClient, 
             IGroupRepository groupRepo, 
             ILessonRepository lessonRepo,
             IExamRepository examRepo,
-            ScheduleLoader scheduleLoader)
+            ScheduleLoader scheduleLoader,
+            Messanger messanger)
         {
             _telegramClient = telegramClient;
             _groupRepo = groupRepo;
             _lessonRepo = lessonRepo;
             _examRepo = examRepo;
             _scheduleController = scheduleLoader;
+            _messanger = messanger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -52,20 +56,23 @@ namespace University.Bot
                 cancellationToken: stoppingToken
                 );
 
+            
+
             Console.WriteLine("Бот запущен:");
         }
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            Messanger messanger = new Messanger(botClient, cancellationToken); // Инициализация объекта службы отправки сообщений
             ChatData? chatData = null;
-            if (update.Type == UpdateType.CallbackQuery)
+
+            // TODO: ПЕРЕДЕЛАТЬ КОЛЛБЭК КНОПКИ
+            /*if (update.Type == UpdateType.CallbackQuery) 
             {
                 chatData = _chatController.GetById(update.CallbackQuery.From.Id);
                 _chatController.UpdateCurrentMenuById(update.CallbackQuery.From.Id, MenuType.MainMenu, chatData);
-                await messanger.SendMainMenuAsync(update.CallbackQuery.From.Id);
+                await _messanger.SendMainMenuAsync(update.CallbackQuery.From.Id);
                 return;
-            }
+            }*/
 
             long chatId = update.Message.From.Id; // Проверка новый ли чат
             chatData = _chatController.GetById(chatId);
@@ -74,70 +81,53 @@ namespace University.Bot
                 _chatController.Add(chatId);
                 chatData = _chatController.GetById(chatId);
             }
+
             string text = update.Message.Text; // Текст сообщения
 
-
+            bool isUserAdmin = _adminController.IsAdmin(update.Message.From.Username); // проверка есть ли пользователь в списке админов
 
             switch (chatData.CurrentMenu) // Проверка в каком меню должен находится пользователь
             {
                 case MenuType.Start: // Отрисовка стартового меню
                     {
 
-                        if (_adminController.IsAdmin(update.Message.From.Username)) // Проверка является ли пользователь админом
+                        if (isUserAdmin) // Если пользователь есть в списке админов, даём выбирать в какое меню входить
                         {
-                           await messanger.SendChooseMenuAsync(chatId);
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+                            await GoToAdminMainMenu(chatId, chatData, cancellationToken);
                         }
                         else
                         {
-                            await messanger.SendMainMenuAsync(chatId);
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                            await GoToMainMenu(chatId, chatData, isUserAdmin, cancellationToken);
                         }
                         break;
                     }
 
                 case MenuType.LessonScheduleForToday:
                     {
+                        /*_chatController
+
                         if (_adminController.IsAdmin(update.Message.From.Username))
                         {
-                            await messanger.SendOrdinaryMenuForAdminAsync(chatId);
+                            await _messanger.SendOrdinaryMenuForAdminAsync(chatId);
                             _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
                         }
                         else
                         {
                             _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            await messanger.SendMainMenuAsync(chatId);
+                            await _messanger.SendMainMenuAsync(chatId);
 
                         }
+                        break;*/
                         break;
-                    }
-
-
-                   
+                    }                  
 
                 case MenuType.LessonScheduleForWeek:
                     {
-                        if (text == MenuMessages.BACK)
-                        {
-                            if (_adminController.IsAdmin(update.Message.From.Username))
-                            {
-                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            }
-                            else
-                            {
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                                await messanger.SendMainMenuAsync(chatId);
-
-                            }
-                            break;
-                        }                        
-
-                        List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
+                        /*if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, cancellationToken)) break;                       
 
                         if (groups is null)
                         {
-                            await messanger.GroupIsNotFoundMessageAsync(chatId);
+                            await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
                         }
                         else
                         {
@@ -148,110 +138,68 @@ namespace University.Bot
                                 currentWeekParity)
                             .Result);
 
-                            await messanger.SendWeekScheduleAsync(chatId, groups.FirstOrDefault().Name, weekLessons, currentWeekParity);
-                        }
+                            await _messanger.SendWeekScheduleAsync(chatId, groups.FirstOrDefault().Name, weekLessons, currentWeekParity, cancellationToken);
+                        }*/
 
                         break;
                     }
 
                 case MenuType.PracticeSchedule:
                     {
-                        if (text == MenuMessages.BACK)
-                        {
-                            if (_adminController.IsAdmin(update.Message.From.Username))
-                            {
-                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            }
-                            else
-                            {
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                                await messanger.SendMainMenuAsync(chatId);
+                        /*if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, cancellationToken)) break;
 
-                            }
-
-                            break;
-                        }
                         List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
 
                         if (groups is null)
                         {
-                            await messanger.GroupIsNotFoundMessageAsync(chatId);
+                            await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
                         }
                         else
                         {
                             Group group = groups.FirstOrDefault();
-                            await messanger.SendPracticeInfoAsync(chatId, groups.FirstOrDefault());
-                        }
+                            await _messanger.SendPracticeInfoAsync(chatId, groups.FirstOrDefault(), cancellationToken);
+                        }*/
 
                         break;
                     }
 
                 case MenuType.ExamSchedule:
                     {
-                        if (text == MenuMessages.BACK)
-                        {
-                            if (_adminController.IsAdmin(update.Message.From.Username))
-                            {
-                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            }
-                            else
-                            {
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                                await messanger.SendMainMenuAsync(chatId);
+                        /*if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, cancellationToken)) break;
 
-                            }
-
-                            break;
-                        }
                         List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
 
                         if (groups is null)
                         {
-                            await messanger.GroupIsNotFoundMessageAsync(chatId);
+                            await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
                         }
                         else
                         {
                             List<Exam> exams = await Task.Run(() => _examRepo.GetExamsByGroupName(groups.FirstOrDefault().Name).Result);
-                            await messanger.SendExamScheduleAsync(chatId, groups.FirstOrDefault(), exams);
-                        }
+                            await _messanger.SendExamScheduleAsync(chatId, groups.FirstOrDefault(), exams, cancellationToken);
+                        }*/
 
                         break;
                     }
 
                 case MenuType.InsertingGroupName:
                     {
-                        if (text == MenuMessages.BACK)
-                        {
-                            if (_adminController.IsAdmin(update.Message.From.Username))
-                            {
-                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                            }
-                            else
-                            {
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-                                await messanger.SendMainMenuAsync(chatId);
-
-                            }
-                            break;
-                        }
+                       /* if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, cancellationToken)) break;
 
                         List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
 
                         if (groups is null)
                         {
-                            await messanger.GroupIsNotFoundMessageAsync(chatId);
+                            await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
                         }
                         else
                         {
-                            _chatController.UpdateGroupName(chatId, text, chatData);
+                            _chatController.UpdateSearchQueryName(chatId, text, chatData);
 
                             switch (chatData.NextMenu)
                             {
                                 case MenuType.LessonScheduleForToday:
-                                    await GoToTodaySchedule(messanger, chatId, chatData, text);
+                                    await GoToTodaySchedule(_messanger, chatId, chatData, text);
                                     _chatController.UpdateNextMenuById(chatId, null, chatData);
 
                                     break;
@@ -259,7 +207,7 @@ namespace University.Bot
                                 default:
                                     break;
                             }
-                        }
+                        }*/
 
                         break;
                     }
@@ -269,12 +217,10 @@ namespace University.Bot
                         switch (text)
                         {
                             case MenuMessages.ENTER_ADMIN_MENU:
-                                await messanger.SendAdminMainMenuAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                                await GoToAdminMainMenu(chatId, chatData, cancellationToken);
                                 break;
                             case MenuMessages.ENTER_ORD_MENU:
-                                await messanger.SendOrdinaryMenuForAdminAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                await GoToMainMenu(chatId, chatData, isUserAdmin, cancellationToken);
                                 break;
 
                             default:
@@ -289,20 +235,16 @@ namespace University.Bot
                         switch (text)
                         {
                             case MenuMessages.ADMIN_LOAD_SCHEDULE:
-                                await messanger.SendReadyToProcessSchedules(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadSchedule, chatData);
+                                await StartLoadingSchedule(chatId, chatData, cancellationToken);
                                 break;
                             case MenuMessages.ADMIN_LOAD_CORPUS_INFO:
-                                await messanger.SendReadyToProcessCorpusInfo(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadCorpusInfo, chatData);
+                                await StartLoadingCorpusInfo(chatId, chatData, cancellationToken);                                
                                 break;
                             case MenuMessages.ADMIN_LOAD_HEAD_INFO:
-                                await messanger.SendReadyToProcessHeadInfo(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadHeadInfo, chatData);
+                                await StartLoadingHeadInfo(chatId, chatData, cancellationToken);                                
                                 break;
-                            case MenuMessages.CHOOSE_MENU:
-                                await messanger.SendChooseMenuAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+                            case MenuMessages.ENTER_CHOOSE_MENU:
+                                await GoToChooseMenu(chatId, chatData, cancellationToken);
                                 break;
                             default:
                                 break;
@@ -314,8 +256,7 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            await messanger.SendAdminMainMenuAsync(chatId);
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                            await GoToAdminMainMenu(chatId, chatData, cancellationToken);
                         }
                         else
                         {
@@ -325,39 +266,17 @@ namespace University.Bot
 
                                 if (isGroupNew)
                                 {
-                                    await messanger.SendGroupAddedMessage(chatId, groupName);
+                                    await _messanger.SendGroupAddedMessageAsync(chatId, groupName, cancellationToken);
                                 }
 
-                                await messanger.SendScheduleAddedMessage(chatId, groupName);
+                                await _messanger.SendScheduleAddedMessageAsync(chatId, groupName, cancellationToken);
                             }
                             else
                             {
-                                await messanger.SendWrongFileForSchedule(chatId);
+                                await _messanger.SendWrongFileForScheduleAsync(chatId, cancellationToken);
 
                             }
                         }
-
-                        
-
-
-                        
-
-                        /*if (update.Message.Type == MessageType.Document)
-                        {
-                            if (update.Message.Document.FileName.Contains(".pdf"))
-                            {
-                                Document documentToDownload = update.Message.Document;
-                                string pathDownload = DataConfig.DATA_FOLDER_PATH + "/schedules/PDF/" + documentToDownload.FileName;
-
-                                await DownloadFileAsync(documentToDownload, pathDownload, cancellationToken);
-
-                                await _scheduleController.AddScheduleAsync(pathDownload);
-                            }
-                            else
-                            {
-                                await messanger.SendWrongFileForSchedule(chatId);
-                            }
-                        }*/
 
                         break;
                     }
@@ -366,25 +285,17 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            await messanger.SendAdminMainMenuAsync(chatId);
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                            await GoToAdminMainMenu(chatId, chatData, cancellationToken);
                         }
                         else
                         {
                             if (update.Message.Type == MessageType.Document)
                             {
-                                var fileInfo = await _telegramClient.GetFileAsync(update.Message.Document.FileId);
-
-                                var filePath = DataConfig.DATA_FOLDER_PATH + "info/corpus.txt";
-
-                                await DownloadFileAsync(update.Message.Document, filePath, cancellationToken);
-
-                                await messanger.SendInfoCorpusSuccess(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                                string corpusInfoFilePath = "info/corpus.txt";
+                                await DownloadFileToInfoFolder(update, corpusInfoFilePath, cancellationToken);
+                                await SendCorpusFileLoadedSuccessfully(chatId, chatData, cancellationToken);
                             }
-                        }
-
-                        
+                        }                       
 
                         break;
                     }
@@ -393,25 +304,17 @@ namespace University.Bot
                     {
                         if (text == MenuMessages.BACK)
                         {
-                            await messanger.SendAdminMainMenuAsync(chatId);
-                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                            await GoToAdminMainMenu(chatId, chatData, cancellationToken);
                         }
                         else
                         {
                             if (update.Message.Type == MessageType.Document)
                             {
-                                var fileInfo = await _telegramClient.GetFileAsync(update.Message.Document.FileId);
-
-                                var filePath = DataConfig.DATA_FOLDER_PATH + "info/head.txt";
-
-                                await DownloadFileAsync(update.Message.Document, filePath, cancellationToken);
-
-                                await messanger.SendInfoHeadSuccess(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+                                string headInfoFilePath = "info/head.txt";
+                                await DownloadFileToInfoFolder(update, headInfoFilePath, cancellationToken);
+                                await SendHeadFileLoadedSuccessfully(chatId, chatData, cancellationToken);
                             }
                         }
-
-
 
                         break;
                     }
@@ -422,22 +325,22 @@ namespace University.Bot
                         {
                             case MenuMessages.WATCH_TODAY_SCHEDULE:
 
-                                string? groupName = _chatController.GetGroupName(chatId);
+                                /*string? groupName = _chatController.GetSearchQueryName(chatId);
 
                                 if (groupName is null)
                                 {
-                                    await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                    await _messanger.SendStartingInsertGroupNameAsync(chatId);
                                     _chatController.UpdateNextMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
                                     _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
                                 }
                                 else
                                 {
-                                    await GoToTodaySchedule(messanger, chatId, chatData, groupName);
-                                }
+                                    await GoToTodaySchedule(_messanger, chatId, chatData, groupName);
+                                }*/
 
                                 /*if (_chatController.GetGroupNameFromChatData(chatId) is null)
                                 {
-                                    await messanger.SendStartingInsertGroupNameAsync(chatId);
+                                    await _messanger.SendStartingInsertGroupNameAsync(chatId);
 
                                 }
 
@@ -447,48 +350,54 @@ namespace University.Bot
 
                             case MenuMessages.WATCH_WEEK_SCHEDULE:
 
+                                /*string? searchQueryName = _chatController.GetSearchQueryName(chatId); // Получаем либо имя группы, либо имя преподавателя
+                                // по которым будет производится поиск расписания
 
+                                if (searchQueryName is null)
+                                {
+                                    _chatController.UpdateNextMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);
+                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
+                                    await _messanger.StartInsertingSearchQueryAsync(chatId, cancellationToken);
+                                }
 
-                                await messanger.SendStartingInsertGroupNameAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);
+                                await _messanger.SendStartingInsertGroupNameAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);*/
 
                                 break;
 
                             case MenuMessages.WATCH_PRACTICE_SCHEDULE:
 
-                                await messanger.SendStartingInsertGroupNameAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.PracticeSchedule, chatData);
+                               /* await _messanger.SendStartingInsertGroupNameAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.PracticeSchedule, chatData);*/
 
                                 break;
 
                             case MenuMessages.WATCH_EXAM_SCHEDULE:
 
-                                await messanger.SendStartingInsertGroupNameAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);
+                               /* await _messanger.SendStartingInsertGroupNameAsync(chatId);
+                                _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);*/
 
                                 break;
 
                             case MenuMessages.WATCH_CORPUS_INFO:
 
                                 string corpusMessage = await _infoController.GetCorpusInfo();
-                                await messanger.SendInfo(corpusMessage, chatId, _adminController.IsAdmin(update.Message.From.Username));
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+                                await SendInfoAndGoToMainMenu(chatId, corpusMessage, chatData, isUserAdmin, cancellationToken);
 
                                 break;
 
                             case MenuMessages.WATCH_HEAD_INFO:
-                                string headMessage = await _infoController.GetHeadInfo();
-                                await messanger.SendInfo(headMessage, chatId, _adminController.IsAdmin(update.Message.From.Username));
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
 
+                                string headMessage = await _infoController.GetHeadInfo();
+                                await SendInfoAndGoToMainMenu(chatId, headMessage, chatData, isUserAdmin, cancellationToken);
 
                                 break;
-                            case MenuMessages.CHOOSE_MENU:
+
+                            case MenuMessages.ENTER_CHOOSE_MENU:
 
                                 if (_adminController.IsAdmin(update.Message.From.Username))
                                 {
-                                    await messanger.SendChooseMenuAsync(chatId);
-                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+                                    await GoToChooseMenu(chatId, chatData, cancellationToken);
                                 }
 
                                 break;
@@ -518,23 +427,10 @@ namespace University.Bot
            return Task.CompletedTask;        
         }
 
-        public async Task GoToMainMenu(Messanger messager, long chatId, ChatData chatData)
-        {
-            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-            await messager.SendMainMenuAsync(chatId);
-        }
-
-        public async Task GoToTodaySchedule(Messanger messanger, long chatId, ChatData chatData, string groupName)
-        {
-            List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groupName).Result);
-
-            await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groupName, DateTime.Now);
-            _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
-        }
         public async Task DownloadFileAsync(Document document, string path, CancellationToken cancellationToken)
         {
             Telegram.Bot.Types.File file = await _telegramClient.GetFileAsync(document.FileId, cancellationToken);
-            
+
 
             using (Stream fileStream = new FileStream(path, FileMode.Create))
             {
@@ -545,5 +441,135 @@ namespace University.Bot
                     );
             }
         }
+
+
+        /*
+         ========CHAT CONTROLLER AND MESSANGER COMBINER METHODS===========
+         */
+
+        /// <summary>
+        /// Обновляет информацию в ChatData про меню в котором находится пользователь, после этого отправляет сообщение главного меню
+        /// </summary>
+        /// <param name="chatId"></param>
+        /// <param name="chatData"></param>
+        /// <param name="isUserAdmin"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task GoToMainMenu(long chatId, ChatData chatData, bool isUserAdmin, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            await _messanger.SendMainMenuAsync(chatId, isUserAdmin, ct);
+        }
+
+        /// <summary>
+        /// Переход в главное меню админа
+        /// </summary>
+        /// <param name="chatId"></param>
+        /// <param name="chatData"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task GoToAdminMainMenu(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
+            await _messanger.SendAdminMainMenuAsync(chatId, ct);
+        }
+
+        /// <summary>
+        /// Обновляет информацию в ChatData про меню в котором находится пользователь, после этого отправляет сообщение меню выбора 
+        /// </summary>
+        /// <param name="chatId"></param>
+        /// <param name="chatData"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task GoToChooseMenu(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.ChooseMenu, chatData);
+            await _messanger.SendChooseMenuAsync(chatId, ct);            
+        }
+
+        /// <summary>
+        /// Отправляет информационное сообщение, затем переходит в главное меню
+        /// (информационное сообщение - кафедра, корпуса, ссылки)
+        /// </summary>
+        /// <param name="chatId"></param>
+        /// <param name="infoTextMessage"></param>
+        /// <param name="chatData"></param>
+        /// <param name="isUserAdmin"></param>
+        /// <param name=""></param>
+        /// <returns></returns>
+        public async Task SendInfoAndGoToMainMenu(long chatId, string infoTextMessage, ChatData chatData, bool isUserAdmin, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            await _messanger.SendInfoAsync(chatId, infoTextMessage, isUserAdmin, ct);
+        }
+
+        /// <summary>
+        /// Проверяет, если пользователь нажал назад, то отправляет в главное меню
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> IfMessageIsBackGoToMainMenu(long chatId, ChatData chatData, string text, bool isUserAdmin, CancellationToken ct)
+        {
+            if (text == MenuMessages.BACK)
+            {
+                await GoToMainMenu(chatId, chatData, isUserAdmin, ct);
+                return true;
+            }
+
+            return false;
+        }
+        public async Task StartLoadingCorpusInfo(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadCorpusInfo, chatData);
+            await _messanger.SendReadyToProcessCorpusInfoAsync(chatId, ct);
+        }
+        public async Task SendCorpusFileLoadedSuccessfully(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            await _messanger.SendCorpusFileLoadedSuccessfullyAsync(chatId, ct);
+        }
+
+        public async Task StartLoadingHeadInfo(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadHeadInfo, chatData);
+            await _messanger.SendReadyToProcessHeadInfoAsync(chatId, ct);
+        }
+        public async Task SendHeadFileLoadedSuccessfully(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            await _messanger.SendHeadFileLoadedSuccessfullyAsync(chatId, ct);
+        }
+
+        public async Task StartLoadingSchedule(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadSchedule, chatData);
+            await _messanger.SendReadyToProcessSchedulesAsync(chatId, ct);
+        }
+
+        /// <summary>
+        /// Скачивает файл с текстом информационного сообщения, переходит в админское меню
+        /// (Файл должен быть txt формата)
+        /// </summary>
+        /// <param name="update"></param>
+        /// <param name="chatData"></param>
+        /// <param name="infoMessageText"></param>
+        /// <param name="infoPath"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async Task DownloadFileToInfoFolder(Update update, string infoFileName, CancellationToken ct)
+        {
+            var filePath = DataConfig.DATA_FOLDER_PATH + infoFileName;
+            await DownloadFileAsync(update.Message.Document, filePath, ct);            
+        }
+
+
+        /*public async Task GoToTodaySchedule(Messanger messanger, long chatId, ChatData chatData, string groupName)
+        {
+            List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groupName).Result);
+
+            await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groupName, DateTime.Now);
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
+        }*/
+        
+
     }
 }

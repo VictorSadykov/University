@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace University.Common
+namespace University.MiniMethods
 {
     public static class WeekParityChecker
     {

@@ -14,12 +14,12 @@ namespace University.DLL.Sqlite.Entities
         public int TimeNumber { get; set; } // Какая пара по счёту 
         public DayOfWeek DayNumber { get; set; }
         public int WeekNumber { get; set; }
-        public string TeacherFullName { get; set; }
         public string CabNumber { get; set; }
         public string CorpusLetter { get; set; }
         public string SubGroup { get; set; }
-        public int GroupId { get; set; }
-        public Group Group { get; set; }
+        public int TeacherId { get; set; }
+        public Teacher Teacher { get; set; }
+        public List<Group> Groups { get; set; } = new List<Group>();
 
     }
 

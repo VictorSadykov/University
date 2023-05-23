@@ -11,17 +11,27 @@ namespace University.DLL.Sqlite.Repositories.Real
 {
     public class GroupRepository : IGroupRepository
     {
-        private readonly UniversityDbContext _dbContext = new UniversityDbContext();
+        private readonly UniversityDbContext _dbContext;
 
-        public async Task Add(string groupName)
+        public GroupRepository(UniversityDbContext dbContext)
         {
-            await _dbContext.Groups
-                .AddAsync(new Group { Name= groupName });
+            _dbContext = dbContext;
+        }
+
+        public async Task AddAsync(Group group)
+        {
+            var entry = _dbContext.Entry(group);
+            if (entry.State == EntityState.Detached)
+            {
+                await _dbContext.Groups
+                    .AddAsync(group);
+
+            }
 
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task AddLesson(Group group, Lesson lesson)
+        /*public async Task AddLessonAsync(Group group, Lesson lesson)
         {
             Group foundGroup = await _dbContext.Groups
                  .Include(g => g.Lessons)
@@ -31,21 +41,22 @@ namespace University.DLL.Sqlite.Repositories.Real
             foundGroup.Lessons.Add(lesson);
 
             await _dbContext.SaveChangesAsync();
-        }
+        }*/
 
-        public async Task ResetLessonSchedule(Group group)
+        public async Task ResetLessonScheduleAsync(Group group)
         {
-            Group foundGroup = await _dbContext.Groups
+            Group? foundGroup = await _dbContext.Groups
                  .Include(g => g.Lessons)
                  .Where(g => g.Name == group.Name)
                  .FirstOrDefaultAsync();
 
             foundGroup.Lessons = new List<Lesson>();
+            await _dbContext.SaveChangesAsync();
         }
 
-        public async Task ResetExamSchedule(Group group)
+        public async Task ResetExamScheduleAsync(Group group)
         {
-            Group foundGroup = await _dbContext.Groups
+            Group? foundGroup = await _dbContext.Groups
                  .Include(g => g.Exams)
                  .Where(g => g.Name == group.Name)
                  .FirstOrDefaultAsync();
@@ -53,18 +64,11 @@ namespace University.DLL.Sqlite.Repositories.Real
             foundGroup.Exams = new List<Exam>();
         }
 
-        public async Task<Group> FindByName(string groupName)
+        public async Task<Group> FindByNameAsync(string groupName)
         {
             return await _dbContext.Groups
                 .Where(g => g.Name == groupName)
                 .FirstOrDefaultAsync();
-        }
-
-        public async Task<List<Group>?> GetAllGroupsByNameAsync(string groupName)
-        {
-            return await _dbContext.Groups
-                .Where(g => g.Name == groupName)
-                .ToListAsync();
         }
 
         public async Task<int> WriteOrEditAsync((string groupName, string groupCode, string groupSpecialization, string groupOrientation) groupInfo)

@@ -14,36 +14,54 @@ namespace University.DLL.Sqlite.Repositories.Real
     {
         private readonly UniversityDbContext _dbContext = new UniversityDbContext();
 
-        public async Task<List<Lesson>> GetTodayLessonsByGroupNameAsync(string groupName)
+        public LessonRepository(UniversityDbContext dbContext)
         {
-            List<Lesson> allGroupLessons = await Task.Run(() => GetAllLessonByGroupNameAsync(groupName).Result);
+            _dbContext = dbContext;
+        }
 
-            int weekParity = WeekParityChecker.GetCurrentWeekParity();
-            DayOfWeek dayOfWeek = DateTime.Now.DayOfWeek;
-
-            return allGroupLessons
-                .Where(l => l.WeekNumber == weekParity && l.DayNumber == dayOfWeek)
-                .ToList();
+        public async Task<List<Lesson>> GetDayLessonsByGroupNameAsync(string groupName, int weekParity, DayOfWeek dayOfWeek)
+        {
+            return await _dbContext.Lessons
+                .Include(l => l.Groups)
+                .Where(l => l.Groups
+                    .Any(g => g.Name == groupName) &&
+                    l.WeekNumber == weekParity &&
+                    l.DayNumber == dayOfWeek)
+                .ToListAsync();
+                
         }
 
         public async Task<List<Lesson>> GetAllLessonByGroupNameAsync(string groupName)
         {
             return await _dbContext.Lessons
-                /*.Include(l => l.Groups)
+                .Include(l => l.Groups)
                 .Where(l => l.Groups
                     .Any(g => g.Name == groupName)
-                    )*/
+                    )
                 .ToListAsync();
 
         }
 
         public async Task<List<Lesson>> GetWeekLessonsByGroupNameAsync(string groupName, int weekParity)
         {
-            List<Lesson> allGroupLessons = await Task.Run(() => GetAllLessonByGroupNameAsync(groupName).Result);
+            return await _dbContext.Lessons
+                .Include(l => l.Groups)
+                .Where(l => l.Groups
+                    .Any(g => g.Name == groupName) &&
+                    l.WeekNumber == weekParity)
+                .ToListAsync();
+        }
 
-            return allGroupLessons.
-                Where(l => l.WeekNumber == weekParity)
-                .ToList();
+        public async Task AddAsync(Lesson lesson)
+        {
+            var entry = _dbContext.Entry(lesson);
+            if (entry.State == EntityState.Detached)
+            {
+                await _dbContext.Lessons.AddAsync(lesson);  
+
+            }
+
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

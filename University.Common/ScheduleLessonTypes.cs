@@ -12,6 +12,6 @@ namespace University.Common
         public static string LESSON_NAME_LECTURE = "Лекция";
         public static string LESSON_NAME_LABWORK = "Лаб. р.";
         public static string LESSON_NAME_EXAM = "Экзамен";
-        public static string LESSON_NAME_OFFSET = "Экзамен";
+        public static string LESSON_NAME_OFFSET = "Зачёт";
     }
 }
