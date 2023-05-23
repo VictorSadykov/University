@@ -43,7 +43,7 @@ namespace University.Bot
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_SCHEDULE },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_HEAD_INFO },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_CORPUS_INFO },
-                new KeyboardButton[] { MenuMessages.ENTER_CHOOSE_MENU }
+                new KeyboardButton[] { MenuMessages.ENTER_CHOOSE_MENU },
             })
             {
                 ResizeKeyboard = true

@@ -20,7 +20,6 @@ namespace University.BLL
     public class ScheduleLoader
     {
 
-        private string excelDestPath = DataConfig.DATA_FOLDER_PATH + "schedules/EXCEL/";
         private IGroupRepository _groupRepo;
         private ILessonRepository _lessonRepo;
         private ITeacherRepository _teacherRepo;
