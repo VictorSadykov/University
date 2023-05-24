@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using University.Common;
 using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
+using University.MiniMethods;
 
 namespace University.DLL.Sqlite.Repositories.Real
 {
@@ -49,6 +50,20 @@ namespace University.DLL.Sqlite.Repositories.Real
                 .Where(l => l.Groups
                     .Any(g => g.Name == groupName) &&
                     l.WeekNumber == weekParity)
+                .ToListAsync();
+        }
+
+        public async Task<List<Lesson>> GetWeekLessonsByTeacherFullNameAsync(string teacherFullName, int weekParity)
+        {
+            (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(teacherFullName);
+
+            return await _dbContext.Lessons
+                .Include(l => l.Teacher)
+                .Include(l => l.Groups)
+                .Where(l => l.Teacher.FirstName == firstName &&
+                            l.Teacher.SecondName == secondName &&
+                            l.Teacher.LastName == lastName &&
+                            l.WeekNumber == weekParity)
                 .ToListAsync();
         }
 

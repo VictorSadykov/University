@@ -10,8 +10,10 @@ namespace University.BLL
     public class ChatData
     {
         public long ChatId { get; set; }
-        public MenuType CurrentMenu { get; set; }
+        public MenuType? CurrentMenu { get; set; }
         public MenuType? NextMenu { get; set; }
         public string? SearchQueryName { get; set; }
+        public bool isEntityGroup { get; set; }
+        public DayOfWeek? CurrentScheduleDay { get; set; }
     }
 }

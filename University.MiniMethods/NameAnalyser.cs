@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace University.MiniMethods
 {
-    public static class FullNameParser
+    public static class NameAnalyser
     {
-        public static (string firstName, string lastName, string secondName) Parse(string fullName) // Иванов И. И.
+        public static (string firstName, string lastName, string secondName) FullNameParseToStrings(string fullName) // Иванов И. И.
         {
             string[] strings = fullName.Replace(".", "")
                 .Split(" ");
@@ -18,6 +18,17 @@ namespace University.MiniMethods
             string secondName = strings[2];
 
             return (firstName, lastName, secondName);
+        }
+
+        public static bool IsStringIsOnlyLastName(string input)
+        {
+            string[] strings = input.Trim().Split(" ");
+            if (strings.Length > 1)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

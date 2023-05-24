@@ -8,7 +8,7 @@ namespace University.Common
 {
     public static class MenuMessages
     {
-        public const string START_INSERT_GROUP_NAME = "Ввести название группы.";
+        public const string INSERT_ENTITY_NAME_MENU_ITEM = "Ввести название группы.";
         public const string START_SKIP = "Пропустить.";
         public const string BACK = "Назад.";
         public const string WATCH_TODAY_SCHEDULE = "Посмотреть расписание на сегодня.";
@@ -33,6 +33,7 @@ namespace University.Common
         public const string SEND_CORPUS_FILE = "Отправьте txt файл с информацией о корпусах.";
         public const string CORPUS_FILE_LOADED_SUCCESSFULLY = "Информация о корпусах загружена.";
         public const string HEAD_FILE_LOADED_SUCCESSFULLY = "Информация о кафедре загружена.";
+        public const string INSERT_ENTITY_NAME = "Введите название учебной группы или инициалы преподавателя.\nПример:\n А01-02Б (для поиска по группе)\nИванов (для поиска по преподавателю только по фамилии)\nИванов И. О. (для поиска по преподавателю полностью по инициалам)";
 
 
     }

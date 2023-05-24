@@ -45,6 +45,11 @@ namespace University.DLL.Sqlite.Repositories.Real
             await _dbContext.SaveChangesAsync();
         }
 
+        public async Task<Teacher> FindByIdAsync(int id)
+        {
+            return await _dbContext.Teachers.Where(t => t.Id == id).FirstOrDefaultAsync();
+        }
+
         public async Task<Teacher?> FindByFullNameAsync(string fullName)
         {
             string[] strings = fullName

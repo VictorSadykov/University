@@ -142,7 +142,7 @@ namespace University.BLL
 
                                 if (foundTeacher is null)
                                 {
-                                    (string firstName, string lastName, string secondName) = FullNameParser.Parse(entityName);
+                                    (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(entityName);
 
                                     foundTeacher = new Teacher()
                                     {
@@ -284,7 +284,7 @@ namespace University.BLL
 
                 if (teacher is null)
                 {
-                    (string firstName, string lastName, string secondName) = FullNameParser.Parse(teacherName);
+                    (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(teacherName);
                     teacher = new Teacher()
                     {
                         FirstName = firstName,

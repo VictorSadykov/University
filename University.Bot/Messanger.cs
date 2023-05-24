@@ -84,7 +84,7 @@ namespace University.Bot
 
         // TODO: СГРУППИРОВАТЬ МЕТОДЫ 
 
-        /*private string DrawOneDayLessons(List<Lesson> todayLessons)
+        private string DrawOneDayLessons(List<Lesson> todayLessons, bool isGroupSchedule)
         {
             string output = null;
 
@@ -153,26 +153,54 @@ namespace University.Bot
                         break;
                 }
 
-                
 
-                bool isLessonWithAllSubgroups = false;
+
+                string subGroup = lesson.SubGroup;
+                if (subGroup != "0")
+                {
+                    output += subGroup + " подгруппа" + Environment.NewLine;
+                }
 
                 output += $"⏲ {timeStart} - {timeEnd}{Environment.NewLine}" +
-                    $"{emoji} {lesson.Name}({lessonAlias}){Environment.NewLine}" +
-                    $"👩‍🏫 {lesson.TeacherFullName}{Environment.NewLine}" +
-                    $"🏫 корп. \"{lesson.CorpusLetter}\" каб. \"{lesson.CabNumber}\"{Environment.NewLine}{Environment.NewLine}";
+                    $"{emoji} {lesson.Name}({lessonAlias}){Environment.NewLine}";
+
+                if (isGroupSchedule)
+                {
+                    output += $"👩‍🏫 {lesson.Teacher.LastName} {lesson.Teacher.FirstName}. {lesson.Teacher.SecondName}.{Environment.NewLine}";
+                }
+                else
+                {
+                    foreach (var item in lesson.Groups)
+                    {
+                        output += $"👨‍🎓 {item.Name}{Environment.NewLine}";
+                    }
+                }
                     
+
+
+                output += $"🏫 корп. \"{lesson.CorpusLetter}\" каб. \"{lesson.CabNumber}\"{Environment.NewLine}{Environment.NewLine}";
+
 
             }
 
             return output;
 
-        }*/
+        }
 
-        /*public async Task<Message> SendWeekScheduleAsync(long chatId, string groupName, List<Lesson> weekLessons, int weekParity, CancellationToken ct)
+        public async Task<Message> SendWeekScheduleAsync(long chatId, string entityName, bool isGroupSchedule, List<Lesson> weekLessons, int weekParity, CancellationToken ct)
         {
-            string textMessage = $"Группа: {groupName}{Environment.NewLine}" +
+            string textMessage;
+            if (isGroupSchedule)
+            {
+                textMessage = $"Группа: {entityName}{Environment.NewLine}" +
                 $"Неделя {weekParity}{Environment.NewLine}{Environment.NewLine}";
+            }
+            else
+            {
+                textMessage = $"Преподаватель: {entityName}{Environment.NewLine}" +
+                $"Неделя {weekParity}{Environment.NewLine}{Environment.NewLine}";
+            }
+
 
 
             for (int dayNumber = 1; dayNumber <= 6; dayNumber++)
@@ -186,22 +214,52 @@ namespace University.Bot
                     continue;
                 }
 
-                
+
 
                 textMessage += $"📆 <b>{dayName}{Environment.NewLine}{Environment.NewLine}</b>" +
-                    $"{DrawOneDayLessons(weekLessons.Where(l => l.DayNumber == (DayOfWeek)dayNumber).ToList())}" +
+                    $"{DrawOneDayLessons(weekLessons.Where(l => l.DayNumber == (DayOfWeek)dayNumber).ToList(), isGroupSchedule)}" +
                     $"{Environment.NewLine}" +
                     $"{Environment.NewLine}";
             }
+
+            InlineKeyboardMarkup backButton = new InlineKeyboardMarkup(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад.", callbackData: "back")
+                }
+            );
 
             return await _telegramClient.SendTextMessageAsync(
                 chatId,
                 text: textMessage,
                 cancellationToken: ct,
-                replyMarkup: DrawBackKeyboard(),
+                replyMarkup: backButton,
                 parseMode: ParseMode.Html
             );
-        }*/
+        }
+
+        private string GetDayOfWeekName(DayOfWeek dayOfWeek)
+        {
+
+            switch (dayOfWeek)
+            {
+                case DayOfWeek.Monday:
+                    return "Понедельник";
+                case DayOfWeek.Tuesday:
+                    return "Вторник";
+                case DayOfWeek.Wednesday:
+                    return "Среда";
+                case DayOfWeek.Thursday:
+                    return "Четверг";
+                case DayOfWeek.Friday:
+                    return "Пятница";
+                case DayOfWeek.Saturday:
+                    return "Суббота";
+                default:
+                    break;
+            }
+
+            return "Воскресенье";
+        }
 
 
         /*public async Task<Message> SendOneDayScheduleAsync(long chatId, List<Lesson> lessons, string groupName, DateTime dateTime, CancellationToken ct)
@@ -240,7 +298,7 @@ namespace University.Bot
                 );
         }*/
 
-        
+
 
         /*public async Task<Message> SendPracticeInfoAsync(long chatId, Group group, CancellationToken ct)
         {
@@ -355,5 +413,65 @@ namespace University.Bot
             ReplyKeyboardMarkup mainMenuKeyboard = MessageDrawer.GetMainMenuKeyboard(isAdmin);
             return await SendTextMessageWithKeyboardAsync(chatId, text, mainMenuKeyboard, ct);
         }
+
+        public async Task<Message> StartInsertingSearchQueryAsync(long chatId, CancellationToken cancellationToken)
+        {
+            ReplyKeyboardMarkup backKeyboard = MessageDrawer.GetBackKeyboard();
+            return await SendTextMessageWithKeyboardAsync(chatId, MenuMessages.INSERT_ENTITY_NAME, backKeyboard, cancellationToken);
+        }
+
+        public async Task<Message> SendTeacherVariants(long chatId, List<Teacher> allTeachersWithSameLastName, CancellationToken cancellationToken)
+        {
+            List<List<InlineKeyboardButton>> buttons = new List<List<InlineKeyboardButton>>();
+
+            foreach (var item in allTeachersWithSameLastName)
+            {
+                buttons.Add(new List<InlineKeyboardButton>()
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        text: $"{item.LastName} {item.FirstName}. {item.SecondName}.",
+                        callbackData: item.Id.ToString()
+                    ) 
+                });
+            }
+
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(buttons);
+
+            string textMessage = "Найдено несколько преподавателей по введённой фамилии. Уточните по какому преподавателю производить поиск.";
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                textMessage,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: cancellationToken
+                );
+        }
+
+        public async Task<Message> SendWeekParityKeyboard(long chatId, CancellationToken ct)
+        {
+            string text = "Выберите какой недели хотите посмотреть расписание.";
+
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "1 неделя", callbackData: "1"),
+                    InlineKeyboardButton.WithCallbackData(text: "2 неделя", callbackData: "2"),
+                },
+
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад в главное меню.", callbackData: "backToMenu"),
+                }
+            });
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
     }
 }

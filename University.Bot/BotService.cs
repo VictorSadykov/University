@@ -16,6 +16,7 @@ using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
 using System.Runtime.InteropServices;
 using System.Threading;
+using University.MiniMethods;
 
 namespace University.Bot
 {
@@ -24,6 +25,7 @@ namespace University.Bot
         private ITelegramBotClient _telegramClient;
         private IGroupRepository _groupRepo;
         private ILessonRepository _lessonRepo;
+        private ITeacherRepository _teacherRepo;
         private IExamRepository _examRepo;
         private ChatDataController _chatController = new ChatDataController();
         private AdminController _adminController = new AdminController();
@@ -36,6 +38,7 @@ namespace University.Bot
             IGroupRepository groupRepo, 
             ILessonRepository lessonRepo,
             IExamRepository examRepo,
+            ITeacherRepository teacherRepo,
             ScheduleLoader scheduleLoader,
             Messanger messanger)
         {
@@ -45,6 +48,7 @@ namespace University.Bot
             _examRepo = examRepo;
             _scheduleController = scheduleLoader;
             _messanger = messanger;
+            _teacherRepo = teacherRepo;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -64,17 +68,76 @@ namespace University.Bot
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             ChatData? chatData = null;
-
+            long chatId;
             // TODO: ПЕРЕДЕЛАТЬ КОЛЛБЭК КНОПКИ
-            /*if (update.Type == UpdateType.CallbackQuery) 
+            if (update.Type == UpdateType.CallbackQuery)
             {
-                chatData = _chatController.GetById(update.CallbackQuery.From.Id);
-                _chatController.UpdateCurrentMenuById(update.CallbackQuery.From.Id, MenuType.MainMenu, chatData);
-                await _messanger.SendMainMenuAsync(update.CallbackQuery.From.Id);
-                return;
-            }*/
+                chatId = update.CallbackQuery.From.Id;
+                chatData = _chatController.GetById(chatId);
+                string callBackData = update.CallbackQuery.Data;
+                bool isCallbackUserAdmin = _adminController.IsAdmin(update.CallbackQuery.From.Username);
+                switch (chatData.CurrentMenu)
+                {
+                    case MenuType.InsertingEntityName:
+                        Teacher teacher = await _teacherRepo.FindByIdAsync(int.Parse(callBackData));
+                        string teacherFullName = $"{teacher.LastName} {teacher.FirstName}. {teacher.SecondName}.";
+                        _chatController.UpdateSearchQueryName(chatId, teacherFullName, chatData);
+                        _chatController.UpdateCurrentMenuById(chatId, MenuType.WeekParityInsert, chatData);
+                        await _messanger.SendWeekParityKeyboard(chatId, cancellationToken);
+                        break;
 
-            long chatId = update.Message.From.Id; // Проверка новый ли чат
+                    case MenuType.WeekParityInsert:
+                        if (callBackData == "backToMenu")
+                        {
+                            await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, cancellationToken);
+                            return;
+                        }
+
+                        int weekParity = int.Parse(callBackData);
+
+                        ChatData foundChatData = _chatController.GetById(chatId);
+                        MenuType? nextMenuType = chatData.NextMenu;
+
+                        _chatController.UpdateCurrentMenuById(chatId, nextMenuType, chatData);
+                        _chatController.UpdateNextMenuById(chatId, null, chatData);
+
+                        string foundEntityName = foundChatData.SearchQueryName;
+                        List<Lesson> lessons;
+                        if (foundChatData.isEntityGroup)
+                        {
+                            lessons = await _lessonRepo.GetWeekLessonsByGroupNameAsync(foundEntityName,weekParity);
+                        }
+                        else
+                        {
+                            lessons = await _lessonRepo.GetWeekLessonsByTeacherFullNameAsync(foundEntityName, weekParity);
+                        }
+
+                        _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);
+                        await _messanger.SendWeekScheduleAsync(
+                            chatId,
+                            foundEntityName,
+                            foundChatData.isEntityGroup,
+                            lessons,
+                            weekParity,
+                            cancellationToken);
+
+                        break;
+
+                    case MenuType.LessonScheduleForWeek:
+                        if (callBackData == "back")
+                        {
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.WeekParityInsert, chatData);
+                            await _messanger.SendWeekParityKeyboard(chatId, cancellationToken);
+                        }
+
+                        break;
+
+                }
+
+                return;
+            }
+
+            chatId = update.Message.From.Id; // Проверка новый ли чат
             chatData = _chatController.GetById(chatId);
             if (chatData is null)
             {
@@ -182,13 +245,46 @@ namespace University.Bot
                         break;
                     }
 
-                case MenuType.InsertingGroupName:
+                case MenuType.InsertingEntityName:
                     {
-                       /* if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, cancellationToken)) break;
+                        if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, cancellationToken)) break;
 
-                        List<Group>? groups = await Task.Run(() => _groupRepo.GetAllGroupsByNameAsync(text).Result);
+                        text = text.Trim();
+                        bool isStringGroupName = GroupNameAnalyser.DefineIsStringGroupName(text);
+                        _chatController.UpdateIsEntityGroupFlagById(chatId, isStringGroupName, chatData);
 
-                        if (groups is null)
+                        Group? group;
+                        Teacher? teacher;
+                        if (isStringGroupName) // Если ввели название группы, то ведётся поиск по группам
+                        {
+                            group = await _groupRepo.FindByNameAsync(text);
+                        }
+                        else
+                        {
+                            bool isStringOnlyLastname = NameAnalyser.IsStringIsOnlyLastName(text);
+
+                            if (isStringOnlyLastname)
+                            {
+                                List<Teacher> allTeachersWithSameLastName = await _teacherRepo.FindAllByLastName(text);
+
+                                if (allTeachersWithSameLastName.Count == 0)
+                                {
+                                    await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
+                                }
+                                else if (allTeachersWithSameLastName.Count == 1)
+                                {
+                                    teacher = allTeachersWithSameLastName[0];
+                                }
+                                else
+                                {
+                                    await _messanger.SendTeacherVariants(chatId, allTeachersWithSameLastName, cancellationToken);
+                                    break;
+                                }
+                            }
+                        }
+
+
+                        /*if (group is null)
                         {
                             await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
                         }
@@ -350,18 +446,7 @@ namespace University.Bot
 
                             case MenuMessages.WATCH_WEEK_SCHEDULE:
 
-                                /*string? searchQueryName = _chatController.GetSearchQueryName(chatId); // Получаем либо имя группы, либо имя преподавателя
-                                // по которым будет производится поиск расписания
-
-                                if (searchQueryName is null)
-                                {
-                                    _chatController.UpdateNextMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);
-                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingGroupName, chatData);
-                                    await _messanger.StartInsertingSearchQueryAsync(chatId, cancellationToken);
-                                }
-
-                                await _messanger.SendStartingInsertGroupNameAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForWeek, chatData);*/
+                                await StartInsertingEntityName(chatId, chatData, MenuType.LessonScheduleForWeek, cancellationToken);
 
                                 break;
 
@@ -559,6 +644,23 @@ namespace University.Bot
         {
             var filePath = DataConfig.DATA_FOLDER_PATH + infoFileName;
             await DownloadFileAsync(update.Message.Document, filePath, ct);            
+        }
+
+        public async Task StartInsertingEntityName(long chatId, ChatData chatData, MenuType nextMenuType, CancellationToken ct)
+        {
+            string? searchQueryName = _chatController.GetSearchQueryName(chatId); // Получаем либо имя группы, либо имя преподавателя
+                                                                                  // по которым будет производится поиск расписания
+
+            if (searchQueryName is null)
+            {
+                _chatController.UpdateNextMenuById(chatId, nextMenuType, chatData);
+                _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingEntityName, chatData);
+                await _messanger.StartInsertingSearchQueryAsync(chatId, ct);
+            }
+            else
+            {
+                _chatController.UpdateCurrentMenuById(chatId, nextMenuType, chatData);
+            }
         }
 
 

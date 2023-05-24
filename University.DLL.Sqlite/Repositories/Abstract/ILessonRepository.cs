@@ -13,5 +13,6 @@ namespace University.DLL.Sqlite.Repositories.Abstract
         Task<List<Lesson>> GetAllLessonByGroupNameAsync(string groupName);
         Task<List<Lesson>> GetDayLessonsByGroupNameAsync(string groupName, int weekParity, DayOfWeek dayOfWeek);
         Task<List<Lesson>> GetWeekLessonsByGroupNameAsync(string groupName, int weekParity);
+        Task<List<Lesson>> GetWeekLessonsByTeacherFullNameAsync(string teacherFullName, int weekParity);
     }
 }

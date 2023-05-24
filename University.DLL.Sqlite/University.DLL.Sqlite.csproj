@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\University.Common\University.Common.csproj" />
+    <ProjectReference Include="..\University.MiniMethods\University.MiniMethods.csproj" />
   </ItemGroup>
 
 </Project>

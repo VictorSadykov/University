@@ -61,6 +61,8 @@ namespace University.BLL
             return chatData?.SearchQueryName;
         }
 
+       
+
         public void UpdateNextMenuById(long chatId, MenuType? menuType, ChatData chatData)
         {
             chatData.NextMenu = menuType;
@@ -83,7 +85,7 @@ namespace University.BLL
             _jsonService.WriteObjectToJson(chatDataArray.ToList());
         }
 
-        public void UpdateCurrentMenuById(long chatId, MenuType menuType, ChatData chatData)
+        public void UpdateCurrentMenuById(long chatId, MenuType? menuType, ChatData chatData)
         {
             if (chatData is null)
             {
@@ -99,6 +101,12 @@ namespace University.BLL
             UpdateById(chatId, chatData);
         }
 
-      
+        public void UpdateIsEntityGroupFlagById(long chatId, bool isEntityGroupFlag, ChatData chatData)
+        {
+            chatData.isEntityGroup = isEntityGroupFlag;
+            UpdateById(chatId, chatData);
+        }
+
+
     }
 }

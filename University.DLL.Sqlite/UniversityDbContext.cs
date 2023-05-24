@@ -13,8 +13,7 @@ namespace University.DLL.Sqlite
 
         public UniversityDbContext()
         {
-            Database.EnsureDeleted();
-            Database.EnsureCreated();
+           
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

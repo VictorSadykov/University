@@ -13,5 +13,6 @@ namespace University.DLL.Sqlite.Repositories.Abstract
         Task AddAsync(Teacher teacher);
         Task<List<Teacher>> FindAllByLastName(string lastName);
         Task ResetLessonScheduleAsync(Teacher teacher);
+        Task<Teacher> FindByIdAsync(int id);
     }
 }

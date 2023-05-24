@@ -15,11 +15,12 @@ namespace University.Common
         LessonScheduleForWeek,
         PracticeSchedule,
         ExamSchedule,
-        InsertingGroupName,
+        InsertingEntityName,
         ChooseMenu,
         AdminMainMenu,
         AdminLoadSchedule,
         AdminLoadHeadInfo,
-        AdminLoadCorpusInfo
+        AdminLoadCorpusInfo,
+        WeekParityInsert
     }
 }
