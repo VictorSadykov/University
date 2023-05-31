@@ -31,6 +31,20 @@ namespace University.DLL.Sqlite.Repositories.Real
                 .ToListAsync();
                 
         }
+        public async Task<List<Lesson>> GetOneDayLessonsByTeacherFullNameAsync(string teacherFullName, int weekParity, DayOfWeek dayOfWeek)
+        {
+            (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(teacherFullName);
+
+            return await _dbContext.Lessons
+                .Include(l => l.Teacher)
+                .Include(l => l.Groups)
+                .Where(l => l.Teacher.FirstName == firstName &&
+                            l.Teacher.SecondName == secondName &&
+                            l.Teacher.LastName == lastName &&
+                            l.WeekNumber == weekParity &&
+                            l.DayNumber == dayOfWeek)
+                .ToListAsync();
+        }
 
         public async Task<List<Lesson>> GetAllLessonByGroupNameAsync(string groupName)
         {
@@ -47,6 +61,7 @@ namespace University.DLL.Sqlite.Repositories.Real
         {
             return await _dbContext.Lessons
                 .Include(l => l.Groups)
+                .Include(l => l.Teacher)
                 .Where(l => l.Groups
                     .Any(g => g.Name == groupName) &&
                     l.WeekNumber == weekParity)

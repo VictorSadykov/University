@@ -11,6 +11,7 @@ namespace University.BLL
     {
         private const string HEAD_PATH = DataConfig.DATA_FOLDER_PATH + "info/head.txt";
         private const string CORPUS_PATH = DataConfig.DATA_FOLDER_PATH + "info/corpus.txt";
+        private const string LINKS_PATH = DataConfig.DATA_FOLDER_PATH + "info/links.txt";
 
         private async Task<string> GetInfo(string path)
         {
@@ -31,6 +32,11 @@ namespace University.BLL
         public async Task<string> GetCorpusInfo()
         {
             return await GetInfo(CORPUS_PATH);
+        }
+
+        public async Task<string> GetLinksInfo()
+        {
+            return await GetInfo(LINKS_PATH);
         }
     }
 }

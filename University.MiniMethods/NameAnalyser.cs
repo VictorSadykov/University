@@ -20,6 +20,11 @@ namespace University.MiniMethods
             return (firstName, lastName, secondName);
         }
 
+        public static string CombineToFullName(string firstName, string lastName, string secondName)
+        {
+            return $"{lastName} {firstName}. {secondName}.";
+        }
+
         public static bool IsStringIsOnlyLastName(string input)
         {
             string[] strings = input.Trim().Split(" ");

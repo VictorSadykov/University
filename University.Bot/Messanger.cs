@@ -55,10 +55,10 @@ namespace University.Bot
             return await SendTextMessageWithKeyboardAsync(chatId, text, backKeyboard, ct);
         }
 
-        public async Task<Message> SendMainMenuAsync(long chatId, bool isUserAdmin, CancellationToken ct)
+        public async Task<Message> SendMainMenuAsync(long chatId, bool isUserAdmin, bool isNullEntity, CancellationToken ct)
         {
             string text = MenuMessages.SELECT_MENU_ITEM;
-            var mainMenuKeyBoard = MessageDrawer.GetMainMenuKeyboard(isUserAdmin);
+            var mainMenuKeyBoard = MessageDrawer.GetMainMenuKeyboard(isUserAdmin, isNullEntity);
             return await SendTextMessageWithKeyboardAsync(chatId, text, mainMenuKeyBoard, ct);
         }
 
@@ -78,8 +78,21 @@ namespace University.Bot
 
         public async Task<Message> GroupIsNotFoundMessageAsync(long chatId, CancellationToken ct)
         {
-            string text = MenuMessages.GROUP_IS_NOT_FOUND;
-            return await SendTextMessageAsync(chatId, text, ct);
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад в главное меню.", callbackData: "backToMenu"),
+                }
+            });
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                MenuMessages.GROUP_IS_NOT_FOUND,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+
         }
 
         // TODO: СГРУППИРОВАТЬ МЕТОДЫ 
@@ -237,6 +250,69 @@ namespace University.Bot
             );
         }
 
+        public async Task<Message> SendOneDayScheduleAsync(long chatId, string entityName, bool isGroupSchedule, int workingDaysCount, List<Lesson> dayLessons, DateTime dateTime, int weekParity, CancellationToken ct)
+        {
+            string textMessage;
+            if (isGroupSchedule)
+            {
+                textMessage = $"Группа: {entityName}{Environment.NewLine}{Environment.NewLine}";
+            }
+            else
+            {
+                textMessage = $"Преподаватель: {entityName}{Environment.NewLine}{Environment.NewLine}";
+            }
+
+            string dayOfWeekName = dateTime.ToString("dddd");
+            var strb = new StringBuilder(dayOfWeekName);
+            strb[0] = dayOfWeekName[0].ToString().ToUpper()[0];
+            dayOfWeekName = strb.ToString();
+
+            textMessage += $"Неделя {weekParity}{Environment.NewLine}" +
+            $"{dayOfWeekName}{Environment.NewLine}" +
+            $"{dateTime.ToString("M")}{Environment.NewLine}{Environment.NewLine}";
+
+           
+            textMessage += $"{DrawOneDayLessons(dayLessons, isGroupSchedule)}" +
+                $"{Environment.NewLine}" +
+                $"{Environment.NewLine}";
+
+            InlineKeyboardMarkup keyBoard;
+
+            if (workingDaysCount > 1)
+            {
+                keyBoard = new InlineKeyboardMarkup(new[]
+                {
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(text: "Предыдущий день.", callbackData: "prev"),
+                        InlineKeyboardButton.WithCallbackData(text: "Следующий день.", callbackData: "next")
+                    },
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(text: "Назад.", callbackData: "back")
+                    }
+                });
+            }
+            else
+            {
+                keyBoard = new InlineKeyboardMarkup(new[]
+                {
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(text: "Назад.", callbackData: "back")
+                    }
+                });
+            }
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: textMessage,
+                cancellationToken: ct,
+                replyMarkup: keyBoard,
+                parseMode: ParseMode.Html
+            );
+        }
+
         private string GetDayOfWeekName(DayOfWeek dayOfWeek)
         {
 
@@ -254,49 +330,47 @@ namespace University.Bot
                     return "Пятница";
                 case DayOfWeek.Saturday:
                     return "Суббота";
-                default:
-                    break;
+                case DayOfWeek.Sunday:
+                    return "Воскресенье";             
             }
 
-            return "Воскресенье";
+            return null;
+        }
+
+        private string GetDayOfMonthName(DateTime dateTime)
+        {
+            switch (dateTime.Month)
+            {
+                case 1:
+                    return "января";
+                case 2:
+                    return "февраля";
+                case 3:
+                    return "марта";
+                case 4:
+                    return "апреля";
+                case 5:
+                    return "мая";
+                case 6:
+                    return "июня";
+                case 7:
+                    return "июля";
+                case 8:
+                    return "августа";
+                case 9:
+                    return "сентября";
+                case 10:
+                    return "октября";
+                case 11:
+                    return "ноября";
+                case 12:
+                    return "декабря";
+            }
+
+            return null;
         }
 
 
-        /*public async Task<Message> SendOneDayScheduleAsync(long chatId, List<Lesson> lessons, string groupName, DateTime dateTime, CancellationToken ct)
-        {
-            string textMessage = null;
-
-            if (dateTime.DayOfWeek == DayOfWeek.Sunday)
-            {
-                textMessage = "Воскресенье. Нет пар.";
-            }
-            else
-            {
-                textMessage = $"Группа: {groupName}{Environment.NewLine}" +
-                    $"{dateTime.Date}. {GetDayOfWeekName(dateTime.DayOfWeek)}. {Environment.NewLine}{Environment.NewLine}" +
-                    $"{DrawOneDayLessons(lessons)}";
-            }
-
-            InlineKeyboardMarkup inlineKeyboard = new(new[]{
-                // first row
-                new []
-                {
-                    InlineKeyboardButton.WithCallbackData(text: "<-", callbackData: "Yesterday"),
-                    InlineKeyboardButton.WithCallbackData(text: "->", callbackData: "Tomorrow"),
-                },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData(text: "Вернуться в главное меню", callbackData: "Back"),
-                }
-            });
-
-            return await _telegramClient.SendTextMessageAsync(
-                    chatId,
-                    text: textMessage,
-                    cancellationToken: ct,
-                    replyMarkup: inlineKeyboard
-                );
-        }*/
 
 
 
@@ -358,6 +432,7 @@ namespace University.Bot
             return await SendTextMessageWithKeyboardAsync(chatId, text, backKeyboard, ct);
         }
 
+
         public async Task<Message> SendWrongFileForScheduleAsync(long chatId, CancellationToken ct)
         {
             string text = MenuMessages.WRONG_LINK_FORMAT;
@@ -387,6 +462,13 @@ namespace University.Bot
             return await SendTextMessageWithKeyboardAsync(chatId, text, backKeyboard, ct);
         }
 
+        public async Task<Message> SendReadyToProcessLinksInfoAsync(long chatId, CancellationToken ct)
+        {
+            string text = MenuMessages.SEND_LINKS_FILE;
+            ReplyKeyboardMarkup backKeyboard = MessageDrawer.GetBackKeyboard();
+            return await SendTextMessageWithKeyboardAsync(chatId, text, backKeyboard, ct);
+        }
+
         public async Task<Message> SendReadyToProcessCorpusInfoAsync(long chatId, CancellationToken ct)
         {
             string text = MenuMessages.SEND_CORPUS_FILE;
@@ -398,26 +480,46 @@ namespace University.Bot
         {
             string text = MenuMessages.CORPUS_FILE_LOADED_SUCCESSFULLY;
             ReplyKeyboardMarkup menuKeyboard = MessageDrawer.GetAdminMainMenu();
-            return await SendTextMessageWithBackKeyboardAsync(chatId, text, ct);
+            return await SendTextMessageWithKeyboardAsync(chatId, text, menuKeyboard, ct);
+        }
+        public async Task<Message> SendLinksFileLoadedSuccessfullyAsync(long chatId, CancellationToken ct)
+        {
+            string text = MenuMessages.LINKS_FILE_LOADED_SUCCESSFULLY;
+            ReplyKeyboardMarkup menuKeyboard = MessageDrawer.GetAdminMainMenu();
+            return await SendTextMessageWithKeyboardAsync(chatId, text, menuKeyboard, ct);
         }
 
         public async Task<Message> SendHeadFileLoadedSuccessfullyAsync(long chatId, CancellationToken ct)
         {
             string text = MenuMessages.HEAD_FILE_LOADED_SUCCESSFULLY;
             ReplyKeyboardMarkup menuKeyboard = MessageDrawer.GetAdminMainMenu();
-            return await SendTextMessageWithBackKeyboardAsync(chatId, text, ct);
+            return await SendTextMessageWithKeyboardAsync(chatId, text, menuKeyboard, ct);
         }
 
-        public async Task<Message> SendInfoAsync(long chatId, string text, bool isAdmin, CancellationToken ct)
+        public async Task<Message> SendInfoAsync(long chatId, string text, bool isAdmin, bool isNullEntity, CancellationToken ct)
         {
-            ReplyKeyboardMarkup mainMenuKeyboard = MessageDrawer.GetMainMenuKeyboard(isAdmin);
+            ReplyKeyboardMarkup mainMenuKeyboard = MessageDrawer.GetMainMenuKeyboard(isAdmin, isNullEntity);
             return await SendTextMessageWithKeyboardAsync(chatId, text, mainMenuKeyboard, ct);
         }
 
         public async Task<Message> StartInsertingSearchQueryAsync(long chatId, CancellationToken cancellationToken)
         {
-            ReplyKeyboardMarkup backKeyboard = MessageDrawer.GetBackKeyboard();
-            return await SendTextMessageWithKeyboardAsync(chatId, MenuMessages.INSERT_ENTITY_NAME, backKeyboard, cancellationToken);
+
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад в главное меню.", callbackData: "backToMenu"),
+                }
+            });
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                MenuMessages.INSERT_ENTITY_NAME,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: cancellationToken
+                );
+
         }
 
         public async Task<Message> SendTeacherVariants(long chatId, List<Teacher> allTeachersWithSameLastName, CancellationToken cancellationToken)
@@ -473,5 +575,172 @@ namespace University.Bot
                 );
         }
 
+        public async Task<Message> RemoveKeyboard(long chatId, CancellationToken ct)
+        {
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: "",
+                replyMarkup: new ReplyKeyboardRemove(),
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> StartInsertingGroupNameAsync(long chatId, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад в главное меню", callbackData: "backToMenu"),
+                }
+            });
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: MenuMessages.INSERT_GROUP_NAME,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> SendSearchQueryResetedSuccessfully(long chatId, bool isAdmin, bool isNullEntity, CancellationToken cancellationToken)
+        {
+            ReplyKeyboardMarkup mainMenuKeyboard = MessageDrawer.GetMainMenuKeyboard(isAdmin, isNullEntity);
+            return await SendTextMessageWithKeyboardAsync(chatId, MenuMessages.RESET_SEARCH_QUERY_SUCCESSFULLY, mainMenuKeyboard, cancellationToken);
+        }
+
+        public async Task<Message> StartInsertingGroupCode(long chatId, string groupName, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "back"),
+                }
+            });
+
+            string message = $"Группа {groupName} надена.\n\n" + MenuMessages.INSERT_GROUP_CODE;
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: message,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> StartInsertingPracticeTeacherFullName(long chatId, string groupName, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "back"),
+                }
+            });
+
+            string message = $"Группа {groupName} надена.\n\n" + MenuMessages.INSERT_GROUP_PRACTICE_TEACHER_FULLNAME;
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: message,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> StartInsertingGroupSpecialization(long chatId, string groupName, string groupCode, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "back"),
+                }
+            });
+
+            string message = $"Группа: {groupName}.\nКод: {groupCode}.\n\n" + MenuMessages.INSERT_GROUP_SPECIALIZATION;
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: message,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> StartInsertingPracticeStartDate(long chatId, string groupName, string teacherFullName, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "back"),
+                }
+            });
+
+            string message = $"Группа: {groupName}.\nРуководитель: {teacherFullName}.\n\n" + MenuMessages.INSERT_PRACTICE_START_DATE;
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: message,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> StartInsertingGroupOrientation(long chatId, string groupName, string groupCode, string groupSpecialization, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "back"),
+                }
+            });
+
+            string message = $"Группа: {groupName}.\nКод: {groupCode}.\nНаправление: {groupSpecialization}.\n\n" + MenuMessages.INSERT_GROUP_ORIENTATION;
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: message,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> StartInsertingPracticeEndDate(long chatId, string groupName, string fullname, string startDate, CancellationToken ct)
+        {
+            InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+            {
+               new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "back"),
+                }
+            });
+
+            string message = $"Группа: {groupName}.\nРуководитель: {fullname}.\nНачало: {startDate}.\n\n" + MenuMessages.INSERT_PRACTICE_END_DATE;
+
+            return await _telegramClient.SendTextMessageAsync(
+                chatId,
+                text: message,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: ct
+                );
+        }
+
+        public async Task<Message> GroupInfoSavedAsync(long chatId, string groupName, string groupCode, string groupSpecialization, string groupOrientation, CancellationToken ct)
+        {
+            string message = $"Информация о группе сохранена.\n\nГруппа: {groupName}.\nКод: {groupCode}.\nНаправление: {groupSpecialization}.\nНаправленность: {groupOrientation}";
+
+            return await SendTextMessageAsync(chatId, message, ct);
+        }
+
+        public async Task<Message> GroupPracticeInfoSavedAsync(long chatId, string groupName, string fullname, string startDate, string endDate, CancellationToken ct)
+        {
+            string message = $"Информация о группе сохранена.\n\nГруппа: {groupName}.\nРуководитель: {fullname}.\nНачало: {startDate}.\nКонец: {endDate}";
+
+            return await SendTextMessageAsync(chatId, message, ct);
+        }
     }
 }

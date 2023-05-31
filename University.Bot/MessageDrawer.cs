@@ -14,27 +14,26 @@ namespace University.Bot
     public static class MessageDrawer
     {
 
-        public static ReplyKeyboardMarkup GetMainMenuKeyboard(bool isUserAdmin)
+        public static ReplyKeyboardMarkup GetMainMenuKeyboard(bool isUserAdmin, bool isNullEntity)
         {
             ReplyKeyboardMarkup replyKeyboardMarkup;
+            KeyboardButton[][] buttons = GetMainMenuKeys();
+
+            if (!isNullEntity) // Если записано название сущности по которой ищется расписание, то добавляется кнопка сброса поискового запроса
+            {
+                buttons = buttons.Append(new KeyboardButton[] { MenuMessages.RESET_SEARCH_QUERY }).ToArray();
+            }
 
             if (isUserAdmin) // Если пользователь является админом, добавляем кнопку выхода из главного меню 
             {
-                replyKeyboardMarkup = new ReplyKeyboardMarkup(GetMainMenuKeys()
-                    .Append(new KeyboardButton[] { MenuMessages.ENTER_CHOOSE_MENU }))
-                {
-                    ResizeKeyboard = true
-                };
-            }
-            else
-            {
-                replyKeyboardMarkup = new ReplyKeyboardMarkup(GetMainMenuKeys())
-                {
-                    ResizeKeyboard = true
-                };
+                buttons = buttons.Append(new KeyboardButton[] { MenuMessages.ENTER_CHOOSE_MENU }).ToArray();
             }
 
-            return replyKeyboardMarkup;
+            return new ReplyKeyboardMarkup(buttons) 
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
+            };
         }
         public static ReplyKeyboardMarkup GetAdminMainMenu()
         {
@@ -43,10 +42,14 @@ namespace University.Bot
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_SCHEDULE },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_HEAD_INFO },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_CORPUS_INFO },
+                new KeyboardButton[] { MenuMessages.ADMIN_LOAD_LINKS_INFO },
+                new KeyboardButton[] { MenuMessages.ADMIN_FILL_GROUP_PRACTICE_INFO },
+                new KeyboardButton[] { MenuMessages.ADMIN_FILL_GROUP_INFO },
                 new KeyboardButton[] { MenuMessages.ENTER_CHOOSE_MENU },
             })
             {
-                ResizeKeyboard = true
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
             };
         }
         public static ReplyKeyboardMarkup GetChooseMenu()
@@ -57,7 +60,8 @@ namespace University.Bot
                 new KeyboardButton[] { MenuMessages.ENTER_ORD_MENU }
             })
             {
-                ResizeKeyboard = true
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
             };
         }
         public static ReplyKeyboardMarkup GetBackKeyboard()
@@ -67,7 +71,8 @@ namespace University.Bot
                     new KeyboardButton[] {MenuMessages.BACK},
                 })
             {
-                ResizeKeyboard = true
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
             };
 
         }
@@ -104,6 +109,7 @@ namespace University.Bot
                     new KeyboardButton[] {MenuMessages.WATCH_PRACTICE_SCHEDULE},
                     new KeyboardButton[] {MenuMessages.WATCH_CORPUS_INFO},
                     new KeyboardButton[] {MenuMessages.WATCH_HEAD_INFO},
+                    new KeyboardButton[] {MenuMessages.WATCH_LINKS_INFO},
 
                 };
         }

@@ -9,10 +9,11 @@ namespace University.DLL.Sqlite.Repositories.Abstract
 {
     public interface ITeacherRepository
     {
-        Task<Teacher?> FindByFullNameAsync(string fullName);
+        Teacher? FindByFullName(string fullName);
         Task AddAsync(Teacher teacher);
-        Task<List<Teacher>> FindAllByLastName(string lastName);
+        List<Teacher> FindAllByLastName(string lastName);
         Task ResetLessonScheduleAsync(Teacher teacher);
         Task<Teacher> FindByIdAsync(int id);
+        List<(int, DayOfWeek)> GetWorkingDays(string fullName);
     }
 }

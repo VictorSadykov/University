@@ -11,9 +11,16 @@ namespace University.DLL.Sqlite.Repositories.Abstract
     {
         Task AddAsync(Group group);
         //Task AddLessonAsync(Group group, Lesson lesson);
-        Task<Group> FindByNameAsync(string groupName);
+        Group FindByName(string groupName);
+        List<(int, DayOfWeek)> GetWorkingDays(string groupName);
         Task ResetExamScheduleAsync(Group group);
         Task ResetLessonScheduleAsync(Group group);
+        Task UpdateCodeAsync(Group group, string code);
+        Task UpdateOrientationAsync(Group group, string orientation);
+        Task UpdatePracticeEndDateAsync(Group group, string startDate);
+        Task UpdatePracticeStartDateAsync(Group group, string fullName);
+        Task UpdatePracticeTeacherFullNameAsync(Group group, string fullName);
+        Task UpdateSpecializationAsync(Group group, string specialization);
         Task<int> WriteOrEditAsync((string groupName, string groupCode, string groupSpecialization, string groupOrientation) groupInfo);
     }
 }

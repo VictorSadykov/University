@@ -45,33 +45,99 @@ namespace University.DLL.Sqlite.Repositories.Real
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task<Teacher> FindByIdAsync(int id)
+        public async Task<Teacher?> FindByIdAsync(int id)
         {
             return await _dbContext.Teachers.Where(t => t.Id == id).FirstOrDefaultAsync();
         }
 
-        public async Task<Teacher?> FindByFullNameAsync(string fullName)
+        public List<(int, DayOfWeek)> GetWorkingDays(string fullName)
         {
-            string[] strings = fullName
-                .Replace(".", "")
-                .Split(" ");
+            Teacher? foundTeacher = FindByFullName(fullName);
 
-            string firstName = strings[1];
-            string lastName = strings[0];
-            string secondName = strings[2];
+            List<(int WeekNumber, DayOfWeek DayNumber)> weekNumberAndDays = new List<(int, DayOfWeek)>();
 
-            return await _dbContext.Teachers
-                .Where(t => t.FirstName == firstName &&
-                            t.LastName == lastName &&
-                            t.SecondName == secondName)
-                .FirstOrDefaultAsync();
+            
+
+            foreach (var item in foundTeacher.Lessons)
+            {
+                (int weekNumber, DayOfWeek dayOfWeek) dayInfo = (item.WeekNumber, item.DayNumber);
+                if (!weekNumberAndDays.Contains(dayInfo))
+                {
+                    weekNumberAndDays.Add(dayInfo);
+                }
+            }
+
+            List<(int, DayOfWeek)> sortedLessons = weekNumberAndDays
+                .OrderBy(l => l.WeekNumber)
+                .ThenBy(l => l.DayNumber)
+                .ToList();
+
+            return sortedLessons;
         }
 
-        public async Task<List<Teacher>> FindAllByLastName(string lastName)
+        public Teacher? FindByFullName(string fullName)
         {
-            return await _dbContext.Teachers
-                .Where(t => t.LastName == lastName)
-                .ToListAsync();
+            try
+            {
+                string[] strings;
+                if (fullName.Contains("."))
+                {
+                    fullName = fullName
+                        .Replace(".", "");
+                }
+
+                strings = fullName
+                            .Split(" ");
+
+
+
+                if (strings.Length == 2)
+                {
+                    string firstNameLetter = strings[1][0].ToString();
+                    string secondNameLetter = strings[1][1].ToString();
+                    strings[1] = firstNameLetter;
+                    strings = strings.Append(secondNameLetter).ToArray();
+                }
+
+                string firstName = strings[1].ToLower();
+                string lastName = strings[0].ToLower();
+                string secondName = strings[2].ToLower();
+
+                foreach (var item in _dbContext.Teachers.Include(t => t.Lessons).Include(t => t.Exams))
+                {
+                    if (item.FirstName.ToLower() == firstName &&
+                        item.LastName.ToLower() == lastName &&
+                        item.SecondName.ToLower() == secondName)
+                    {
+                        return item;
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception)
+            {
+
+                return null;
+            }
         }
+
+        public List<Teacher> FindAllByLastName(string lastName)
+        {
+            var list = new List<Teacher>();
+            foreach (var item in _dbContext.Teachers)
+            {
+                if (item.LastName.ToLower() == lastName.ToLower())
+                {
+                    list.Add(item);
+                }
+            }
+
+            return list;
+
+            
+        }
+
+
     }
 }

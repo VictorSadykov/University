@@ -69,6 +69,12 @@ namespace University.BLL
             UpdateById(chatId, chatData);
         }
 
+        public void UpdateDayOffset(long chatId, int? dayOffset, ChatData chatData)
+        {
+            chatData.DayOffset = dayOffset;
+            UpdateById(chatId, chatData);
+        }
+
         public void UpdateById(long chatId, ChatData chatDataEditSource)
         {
             var chatDataArray = _jsonService.GetObject< List<ChatData> >()
@@ -95,9 +101,9 @@ namespace University.BLL
             UpdateById(chatId, chatData);
         }
 
-        public void UpdateSearchQueryName(long chatId, string groupName, ChatData chatData)
+        public void UpdateSearchQueryName(long chatId, string? entityName, ChatData chatData)
         {
-            chatData.SearchQueryName = groupName;
+            chatData.SearchQueryName = entityName;
             UpdateById(chatId, chatData);
         }
 
@@ -107,6 +113,22 @@ namespace University.BLL
             UpdateById(chatId, chatData);
         }
 
+        public void UpdateAdminCurrentEditingGroupName(long chatId, string groupName, ChatData chatData)
+        {
+            chatData.AdminCurrentGroupEditingName = groupName;
+            UpdateById(chatId, chatData);
+        }
 
+        public void UpdateDayScheduleById(long chatId, DayOfWeek dayOfWeek, ChatData chatData)
+        {
+            chatData.CurrentScheduleDay = dayOfWeek;
+            UpdateById(chatId, chatData);
+        }
+
+        public void UpdateWeekParityById(long chatId, int weekNumber, ChatData chatData)
+        {
+            chatData.CurrentWeekParity = weekNumber;
+            UpdateById(chatId, chatData);
+        }
     }
 }

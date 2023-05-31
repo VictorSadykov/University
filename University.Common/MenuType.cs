@@ -21,6 +21,14 @@ namespace University.Common
         AdminLoadSchedule,
         AdminLoadHeadInfo,
         AdminLoadCorpusInfo,
-        WeekParityInsert
+        WeekParityInsert,
+        AdminLoadLinksInfo,
+        AdminInsertingGroupName,
+        AdminInsertingGroupCode,
+        AdminInsertingGroupSpecialization,
+        AdminInsertingGroupOrientation,
+        AdminInsertingPracticeTeacherFullName,
+        AdminInsertingPracticeStartDate,
+        AdminInsertingPracticeEndDate,
     }
 }

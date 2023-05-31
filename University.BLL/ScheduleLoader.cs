@@ -57,7 +57,7 @@ namespace University.BLL
             if (isScheduleForGroup)
             {
                 entityName = ExtractGroupName(htmlDoc);
-                if (await _groupRepo.FindByNameAsync(entityName) is null) // Проверка есть ли сущность группы в базе данных
+                if (_groupRepo.FindByName(entityName) is null) // Проверка есть ли сущность группы в базе данных
                 {
                     isEntityNew = true;
                 }
@@ -65,7 +65,7 @@ namespace University.BLL
             else
             {
                 entityName = ExtractTeacherFullName(htmlDoc);
-                if (await _teacherRepo.FindByFullNameAsync(entityName) is null)
+                if (_teacherRepo.FindByFullName(entityName) is null)
                 {
                     isEntityNew = true;
                 }
@@ -79,40 +79,129 @@ namespace University.BLL
                 weekSchedules[i] = ExtractWeekScheduleFromNode(scheduleWeekNodes[i], isScheduleForGroup);
             }
 
-           /* if (isScheduleForGroup)
-            {
-                Group? group = await _groupRepo.FindByNameAsync(entityName);
-                if (group is null)
-                {
-                    group = new Group()
-                    {
-                        Name = entityName
-                    };
+            /* if (isScheduleForGroup)
+             {
+                 Group? group = await _groupRepo.FindByNameAsync(entityName);
+                 if (group is null)
+                 {
+                     group = new Group()
+                     {
+                         Name = entityName
+                     };
 
-                    await _groupRepo.AddAsync(group);
+                     await _groupRepo.AddAsync(group);
+                 }
+
+                 await _groupRepo.ResetLessonScheduleAsync(group);
+             }
+             else
+             {
+                 Teacher? teacher = await _teacherRepo.FindByFullNameAsync(entityName);
+
+                 if (teacher is null)
+                 {
+                     (string firstName, string lastName, string secondName) = FullNameParser.Parse(entityName);
+                     teacher = new Teacher()
+                     {
+                         FirstName = firstName,
+                         LastName = lastName,
+                         SecondName = secondName
+                     };
+
+                     await _teacherRepo.AddAsync(teacher);
+                 }
+
+                 await _teacherRepo.ResetLessonScheduleAsync(teacher);
+             }*/
+
+            if (isScheduleForGroup)
+            {
+                Group? foundGroup = _groupRepo.FindByName(entityName);
+
+                if (foundGroup is null)
+                {
+                    foundGroup = new Group() { Name = entityName };
+                }
+                else
+                {
+                    await _groupRepo.ResetLessonScheduleAsync(foundGroup);
                 }
 
-                await _groupRepo.ResetLessonScheduleAsync(group);
+                foreach (var week in weekSchedules)
+                {
+                    foreach (var day in week)
+                    {
+                        foreach (var time in day)
+                        {
+                            foreach (var lesson in time)
+                            {
+                                if (!lesson.Groups.Contains(foundGroup))
+                                {
+                                    lesson.Groups.Add(foundGroup);
+                                }
+
+                                await _lessonRepo.AddAsync(lesson);
+                            }
+                        }
+                    }
+                }
             }
             else
             {
-                Teacher? teacher = await _teacherRepo.FindByFullNameAsync(entityName);
+                Teacher? foundTeacher = _teacherRepo.FindByFullName(entityName);
 
-                if (teacher is null)
+                if (foundTeacher is null)
                 {
-                    (string firstName, string lastName, string secondName) = FullNameParser.Parse(entityName);
-                    teacher = new Teacher()
+                    (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(entityName);
+
+                    foundTeacher = new Teacher()
                     {
                         FirstName = firstName,
                         LastName = lastName,
                         SecondName = secondName
                     };
-
-                    await _teacherRepo.AddAsync(teacher);
+                }
+                else
+                {
+                    await _teacherRepo.ResetLessonScheduleAsync(foundTeacher);
                 }
 
-                await _teacherRepo.ResetLessonScheduleAsync(teacher);
-            }*/
+                foreach (var week in weekSchedules)
+                {
+                    foreach (var day in week)
+                    {
+                        foreach (var time in day)
+                        {
+                            foreach (var lesson in time)
+                            {
+                                lesson.Teacher = foundTeacher;
+                                await _lessonRepo.AddAsync(lesson);
+                            }
+                        }
+                    }
+                }
+            }
+
+           /* if (isScheduleForGroup)
+            {
+                Group? foundGroup = _groupRepo.FindByName(entityName);
+
+                if (foundGroup is not null)
+                {
+                    await _groupRepo.ResetLessonScheduleAsync(foundGroup);
+                }
+            }
+            else
+            {
+                Teacher? foundTeacher = _teacherRepo.FindByFullName(entityName);
+
+                if (foundTeacher is not null)
+                {
+
+                    await _teacherRepo.ResetLessonScheduleAsync(foundTeacher);
+                }
+            }
+
 
             foreach (var week in weekSchedules)
             {
@@ -125,7 +214,7 @@ namespace University.BLL
 
                             if (isScheduleForGroup)
                             {
-                                Group? foundGroup = await _groupRepo.FindByNameAsync(entityName);
+                                Group? foundGroup = _groupRepo.FindByName(entityName);
                                 if (foundGroup is null)
                                 {
                                     foundGroup = new Group() { Name = entityName };
@@ -138,7 +227,7 @@ namespace University.BLL
                             }
                             else
                             {
-                                Teacher? foundTeacher = await _teacherRepo.FindByFullNameAsync(entityName);
+                                Teacher? foundTeacher = _teacherRepo.FindByFullName(entityName);
 
                                 if (foundTeacher is null)
                                 {
@@ -159,9 +248,9 @@ namespace University.BLL
                         }
                     }
                 }
-            }
-            
-            
+            }*/
+
+
 
             return (entityName, isEntityNew);
         }
@@ -280,7 +369,7 @@ namespace University.BLL
                 teacherName = ExtractTeacherNameFromSingleLesson(lessonUlNode); // Полное имя учителя, которое пишется внутри элемента урока
                 
 
-                Teacher? teacher = await _teacherRepo.FindByFullNameAsync(teacherName); // Проверяем есть ли учитель в базе данных
+                Teacher? teacher = _teacherRepo.FindByFullName(teacherName); // Проверяем есть ли учитель в базе данных
 
                 if (teacher is null)
                 {
@@ -291,6 +380,8 @@ namespace University.BLL
                         LastName = lastName,
                         SecondName = secondName,
                     };
+
+                    await _teacherRepo.AddAsync(teacher);
                 }
 
                 lesson.Teacher = teacher;
@@ -302,7 +393,7 @@ namespace University.BLL
 
                 foreach (var groupName in groupNames)
                 {
-                    Group? group = await _groupRepo.FindByNameAsync(groupName);
+                    Group? group = _groupRepo.FindByName(groupName);
 
                     if (group is null)
                     {
@@ -310,7 +401,7 @@ namespace University.BLL
                         {
                             Name = groupName
                         };
-                        //await _groupRepo.AddAsync(group);
+                        await _groupRepo.AddAsync(group);
                     }
 
                     lesson.Groups.Add(group);

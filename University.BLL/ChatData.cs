@@ -13,7 +13,10 @@ namespace University.BLL
         public MenuType? CurrentMenu { get; set; }
         public MenuType? NextMenu { get; set; }
         public string? SearchQueryName { get; set; }
+        public string? AdminCurrentGroupEditingName { get; set; }
         public bool isEntityGroup { get; set; }
         public DayOfWeek? CurrentScheduleDay { get; set; }
+        public int? CurrentWeekParity { get; set; }
+        public int? DayOffset { get; set; }
     }
 }
