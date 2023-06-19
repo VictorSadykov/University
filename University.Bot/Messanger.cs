@@ -175,7 +175,7 @@ namespace University.Bot
                 }
 
                 output += $"⏲ {timeStart} - {timeEnd}{Environment.NewLine}" +
-                    $"{emoji} {lesson.Name}({lessonAlias}){Environment.NewLine}";
+                    $"{emoji} {lesson.Name} ({lessonAlias}){Environment.NewLine}";
 
                 if (isGroupSchedule)
                 {
@@ -428,6 +428,13 @@ namespace University.Bot
         public async Task<Message> SendReadyToProcessSchedulesAsync(long chatId, CancellationToken ct)
         {
             string text = MenuMessages.SEND_GROUP_SCHEDULE_LINK;
+            var backKeyboard = MessageDrawer.GetBackKeyboard();
+            return await SendTextMessageWithKeyboardAsync(chatId, text, backKeyboard, ct);
+        }
+
+        public async Task<Message> SendReadyToProcessExamsAsync(long chatId, CancellationToken ct)
+        {
+            string text = MenuMessages.SEND_EXAMS_LINK;
             var backKeyboard = MessageDrawer.GetBackKeyboard();
             return await SendTextMessageWithKeyboardAsync(chatId, text, backKeyboard, ct);
         }

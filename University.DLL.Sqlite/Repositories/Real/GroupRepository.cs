@@ -88,7 +88,10 @@ namespace University.DLL.Sqlite.Repositories.Real
                  .FirstOrDefaultAsync();
 
             foundGroup.Exams = new List<Exam>();
+            await _dbContext.SaveChangesAsync();
         }
+
+       
 
         public Group? FindByName(string groupName)
         {

@@ -23,15 +23,109 @@ namespace University.BLL
         private IGroupRepository _groupRepo;
         private ILessonRepository _lessonRepo;
         private ITeacherRepository _teacherRepo;
+        private IExamRepository _examRepo;
 
-        public ScheduleLoader(IGroupRepository groupRepo, ILessonRepository lessonRepo, ITeacherRepository teacherRepo)
+        public ScheduleLoader(IGroupRepository groupRepo, ILessonRepository lessonRepo, ITeacherRepository teacherRepo, IExamRepository examRepo)
         {
             _groupRepo = groupRepo;
             _lessonRepo = lessonRepo;
             _teacherRepo = teacherRepo;
+            _examRepo = examRepo;
         }
 
-        public async Task<(string groupName, bool isGroupNew)> AddScheduleAsync(string link, int deep = 1, List<string> totalLinks = null, List<string> unvisitedLinks = null)
+        public async Task<(string entityName, bool isEntityNew)> AddExamScheduleAsync(string link)
+        {
+            HtmlWeb web = new HtmlWeb();
+            var htmlDoc = await web.LoadFromWebAsync(link);
+
+            bool isScheduleForGroup = link.Contains("group");
+
+            bool isEntityNew = false;
+            string entityName = null;
+
+            var examContainer = htmlDoc.GetElementbyId("session_tab");
+            var dayContainers = examContainer.SelectNodes("./div[@class=\"day\"]");
+
+            if (isScheduleForGroup)
+            {
+                entityName = ExtractGroupName(htmlDoc);
+                if (_groupRepo.FindByName(entityName) is null) // Проверка есть ли сущность группы в базе данных
+                {
+                    isEntityNew = true;
+                }
+            }
+            else
+            {
+                entityName = ExtractTeacherFullName(htmlDoc);
+                if (_teacherRepo.FindByFullName(entityName) is null)
+                {
+                    isEntityNew = true;
+                }
+            }
+
+            var examList = new List<Exam>[dayContainers.Count];
+
+            for (int i = 0; i < dayContainers.Count; i++)
+            {
+                examList[i] = await ExtractDayExamsFromNode(dayContainers[i], isScheduleForGroup);
+            }
+
+            if (isScheduleForGroup)
+            {
+                Group? foundGroup = _groupRepo.FindByName(entityName);
+
+                if (foundGroup is null)
+                {
+                    foundGroup = new Group() { Name = entityName };
+                }
+                else
+                {
+                    await _groupRepo.ResetExamScheduleAsync(foundGroup);
+                }
+
+                foreach (var day in examList)
+                {
+                    foreach (var exam in day)
+                    {
+                        exam.Group = foundGroup;
+                        await _examRepo.AddAsync(exam);
+                    }
+                }
+            }
+            else
+            {
+                Teacher? foundTeacher = _teacherRepo.FindByFullName(entityName);
+
+                if (foundTeacher is null)
+                {
+                    (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(entityName);
+
+                    foundTeacher = new Teacher()
+                    {
+                        FirstName = firstName,
+                        LastName = lastName,
+                        SecondName = secondName
+                    };
+                }
+                else
+                {
+                    await _teacherRepo.ResetExamScheduleAsync(foundTeacher);
+                }
+
+                foreach (var day in examList)
+                {
+                    foreach (var exam in day)
+                    {
+                        exam.Teacher = foundTeacher;
+                        await _examRepo.AddAsync(exam);
+                    }
+                }
+            }
+
+            return (entityName, isEntityNew);
+        }
+
+        public async Task<(string entityName, bool isEntityNew)> AddScheduleAsync(string link)
         {
 
             HtmlWeb web = new HtmlWeb();
@@ -273,6 +367,136 @@ namespace University.BLL
 
             return weekSchedule;
         }
+
+        private async Task<List<Exam>> ExtractDayExamsFromNode(HtmlNode dayNode, bool IsScheduleForGroup)
+        {
+            var daySchedule = new List<Exam>();
+
+            DateTime examsStartDate = ExtractExamDateFromDayNode(dayNode);
+            var examsInOneDayNodes = dayNode
+                .SelectSingleNode("./div[@class=\"body\"]")
+                .SelectNodes("./div[@class=\"line\"]");
+
+            foreach (var examNode in examsInOneDayNodes)
+            {
+                daySchedule.Add(await ExtractSingleExam(examNode, IsScheduleForGroup, examsStartDate));
+            }
+
+            return daySchedule;
+        }
+
+        private async Task<Exam> ExtractSingleExam(HtmlNode examLineNode, bool IsScheduleForGroup, DateTime examDateTime)
+        {
+            var hourTime = ExtractExamHourTime(examLineNode);
+
+            DateTime examStartTime = examDateTime
+                .AddHours(hourTime.Hour)
+                .AddMinutes(hourTime.Minute);
+
+            var examUlNode = examLineNode.SelectSingleNode("./div[@class=\"discipline\"]/div/div/ul");
+
+            (string examName, ExaminationType examType) = ExtractExamNameAndType(examUlNode);
+            (string corpusLetter, string cabNumber) = ExtractCorpusLetterAndCabNumber(examUlNode);
+
+            Exam exam = new Exam
+            {
+                Name = examName,
+                ExaminationType = examType,
+                StartDateTime = examStartTime,
+                CabNumber = cabNumber,
+                CorpusLetter = corpusLetter
+            };
+
+            string teacherName;
+            string groupName;
+            if (IsScheduleForGroup)
+            {
+                teacherName = ExtractTeacherNameFromSingleLesson(examUlNode);
+                Teacher? teacher = _teacherRepo.FindByFullName(teacherName);
+
+                if (teacher is null)
+                {
+                    (string firstName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(teacherName);
+                    teacher = new Teacher()
+                    {
+                        FirstName = firstName,
+                        LastName = lastName,
+                        SecondName = secondName,
+                    };
+
+                    await _teacherRepo.AddAsync(teacher);
+                }
+
+                exam.Teacher = teacher;
+            }
+            else
+            {
+                groupName = ExtractGroupNamesFromSingleLesson(examUlNode)[0];
+                Group? group = _groupRepo.FindByName(groupName);
+
+                if (group is null)
+                {
+                    group = new Group
+                    {
+                        Name = groupName
+                    };
+                    await _groupRepo.AddAsync(group);
+                }
+
+                exam.Group = group;
+            }
+
+            return exam;
+        }
+
+        private (string lessonName, ExaminationType examType) ExtractExamNameAndType(HtmlNode examUlNode)
+        {
+            var liWithExamNameAndType = examUlNode.SelectSingleNode("./li[i[contains(@class, \"fa-bookmark\")]]");
+            var spanWithExamName = liWithExamNameAndType.SelectSingleNode("span");
+            string examName = spanWithExamName.InnerText;
+
+            string ExamTypeName = liWithExamNameAndType.InnerHtml
+                .Replace(liWithExamNameAndType.SelectSingleNode("i").OuterHtml, "")
+                .Replace(spanWithExamName.OuterHtml, "")
+                .Replace("<br>", "")
+                .Replace("(", "")
+                .Replace(")", "")
+                .Trim();
+
+            ExaminationType examType = ExamTypeName switch
+            {
+                "Экзамен" => ExaminationType.Exam,
+                "Зачёт" => ExaminationType.Offset,
+                "Зачет" => ExaminationType.Offset,
+                _ => throw new Exception("Parsing exam type error")
+            };
+
+
+            return (examName, examType);
+        }
+
+        private DateTime ExtractExamHourTime(HtmlNode examNode)
+        {
+            var hourTime = examNode.SelectSingleNode("./div[contains(@class, time)]/div").InnerText;
+            hourTime = hourTime
+                .Replace("\n", "")
+                .Trim();
+
+            return DateTime.ParseExact(hourTime, "HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private DateTime ExtractExamDateFromDayNode(HtmlNode dayNode)
+        {
+            var dateTime = dayNode
+                .SelectSingleNode("./div[@class=\"header\"]/div/div").InnerText;
+
+            dateTime = dateTime
+                .Replace("\n", "")
+                .Trim();
+
+            return DateTime.ParseExact(dateTime, "dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
 
         private List<List<Lesson>> ExtractDayScheduleFromNode(HtmlNode dayNode, int weekNumber, bool isScheduleForGroup)
         {

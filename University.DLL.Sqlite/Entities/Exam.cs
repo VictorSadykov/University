@@ -12,18 +12,22 @@ namespace University.DLL.Sqlite.Entities
         public int Id { get; set; }
         public string Name { get; set; }
         public DateTime StartDateTime { get; set; }
-        public string TeacherFullName { get; set; }
         public ExaminationType ExaminationType { get; set; }
         public string CabNumber { get; set; }
         public string CorpusLetter { get; set; }
+
         [ForeignKey("GroupId")]
         public Group Group { get; set; }
+
+        [ForeignKey("TeacherId")]
+        public Teacher Teacher { get; set; }
 
 
     }
 
     public enum ExaminationType
     {
-        Exam
+        Exam,
+        Offset
     }
 }

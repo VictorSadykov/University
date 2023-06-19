@@ -9,6 +9,7 @@ namespace University.DLL.Sqlite.Repositories.Abstract
 {
     public interface IExamRepository
     {
+        Task AddAsync(Exam exam);
         Task<List<Exam>?> GetExamsByGroupName(string groupName);
     }
 }

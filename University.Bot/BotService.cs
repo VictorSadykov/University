@@ -14,8 +14,6 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
 using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
-using System.Runtime.InteropServices;
-using System.Threading;
 using University.MiniMethods;
 
 namespace University.Bot
@@ -358,13 +356,11 @@ namespace University.Bot
                             if (group is null)
                             {
                                 await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
+                                return;
                             }
                             else
                             {
-                                _chatController.UpdateSearchQueryName(chatId, group.Name, chatData);
-
-
-                                
+                                _chatController.UpdateSearchQueryName(chatId, group.Name, chatData);                                
                             }
                             
                         }
@@ -379,6 +375,7 @@ namespace University.Bot
                                 if (allTeachersWithSameLastName.Count == 0)
                                 {
                                     await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
+                                    return;
                                 }
                                 else if (allTeachersWithSameLastName.Count == 1)
                                 {
@@ -464,6 +461,9 @@ namespace University.Bot
                         {
                             case MenuMessages.ADMIN_LOAD_SCHEDULE:
                                 await StartLoadingSchedule(chatId, chatData, cancellationToken);
+                                break;
+                            case MenuMessages.ADMIN_LOAD_EXAMS:
+                                await StartLoadingExams(chatId, chatData, cancellationToken);
                                 break;
                             case MenuMessages.ADMIN_LOAD_CORPUS_INFO:
                                 await StartLoadingCorpusInfo(chatId, chatData, cancellationToken);                                
@@ -578,7 +578,7 @@ namespace University.Bot
                         break;
                     }
 
-                case MenuType.AdminLoadSchedule:
+                case MenuType.AdminLoadExams:
                     {
                         if (text == MenuMessages.BACK)
                         {
@@ -588,7 +588,7 @@ namespace University.Bot
                         {
                             if (text.StartsWith("https://timetable.pallada.sibsau.ru/timetable/"))
                             {
-                                (string groupName, bool isGroupNew) = await _scheduleController.AddScheduleAsync(text);
+                                (string groupName, bool isGroupNew) = await _scheduleController.AddExamScheduleAsync(text);
 
                                 if (isGroupNew)
                                 {
@@ -606,6 +606,36 @@ namespace University.Bot
 
                         break;
                     }
+
+                case MenuType.AdminLoadSchedule:
+                    {
+                        if (text == MenuMessages.BACK)
+                        {
+                            await GoToAdminMainMenu(chatId, chatData, cancellationToken);
+                        }
+                        else
+                        {
+                            if (text.StartsWith("https://timetable.pallada.sibsau.ru/timetable/"))
+                            {
+                                (string entityName, bool isEntityNew) = await _scheduleController.AddScheduleAsync(text);
+
+                                if (isEntityNew)
+                                {
+                                    await _messanger.SendGroupAddedMessageAsync(chatId, entityName, cancellationToken);
+                                }
+
+                                await _messanger.SendScheduleAddedMessageAsync(chatId, entityName, cancellationToken);
+                            }
+                            else
+                            {
+                                await _messanger.SendWrongFileForScheduleAsync(chatId, cancellationToken);
+
+                            }
+                        }
+
+                        break;
+                    }
+
 
                 case MenuType.AdminLoadCorpusInfo:
                     {
@@ -937,6 +967,12 @@ namespace University.Bot
         {
             _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadSchedule, chatData);
             await _messanger.SendReadyToProcessSchedulesAsync(chatId, ct);
+        }
+
+        public async Task StartLoadingExams(long chatId, ChatData chatData, CancellationToken ct)
+        {
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminLoadExams, chatData);
+            await _messanger.SendReadyToProcessExamsAsync(chatId, ct);
         }
 
         /// <summary>

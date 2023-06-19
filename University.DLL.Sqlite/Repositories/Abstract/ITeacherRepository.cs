@@ -15,5 +15,6 @@ namespace University.DLL.Sqlite.Repositories.Abstract
         Task ResetLessonScheduleAsync(Teacher teacher);
         Task<Teacher> FindByIdAsync(int id);
         List<(int, DayOfWeek)> GetWorkingDays(string fullName);
+        Task ResetExamScheduleAsync(Teacher teacher);
     }
 }

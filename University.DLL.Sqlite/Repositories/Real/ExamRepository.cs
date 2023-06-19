@@ -18,6 +18,19 @@ namespace University.DLL.Sqlite.Repositories.Real
             _dbContext = dbContext;
         }
 
+        public async Task AddAsync(Exam exam)
+        {
+            var entry = _dbContext.Entry(exam);
+            if (entry.State == EntityState.Detached)
+            {
+                await _dbContext.Exams
+                    .AddAsync(exam);
+
+            }
+
+            await _dbContext.SaveChangesAsync();
+        }
+
         public async Task<List<Exam>?> GetExamsByGroupName(string groupName)
         {
             return await _dbContext.Exams

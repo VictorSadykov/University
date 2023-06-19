@@ -18,6 +18,7 @@ namespace University.Common
         InsertingEntityName,
         ChooseMenu,
         AdminMainMenu,
+        AdminLoadExams,
         AdminLoadSchedule,
         AdminLoadHeadInfo,
         AdminLoadCorpusInfo,

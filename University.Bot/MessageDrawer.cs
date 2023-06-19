@@ -40,6 +40,7 @@ namespace University.Bot
             return new ReplyKeyboardMarkup(new[]
             {
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_SCHEDULE },
+                new KeyboardButton[] { MenuMessages.ADMIN_LOAD_EXAMS },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_HEAD_INFO },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_CORPUS_INFO },
                 new KeyboardButton[] { MenuMessages.ADMIN_LOAD_LINKS_INFO },
@@ -107,6 +108,7 @@ namespace University.Bot
                     new KeyboardButton[] {MenuMessages.WATCH_WEEK_SCHEDULE},
                     new KeyboardButton[] {MenuMessages.WATCH_EXAM_SCHEDULE},
                     new KeyboardButton[] {MenuMessages.WATCH_PRACTICE_SCHEDULE},
+                    new KeyboardButton[] {MenuMessages.WATCH_GROUP_INFO},
                     new KeyboardButton[] {MenuMessages.WATCH_CORPUS_INFO},
                     new KeyboardButton[] {MenuMessages.WATCH_HEAD_INFO},
                     new KeyboardButton[] {MenuMessages.WATCH_LINKS_INFO},

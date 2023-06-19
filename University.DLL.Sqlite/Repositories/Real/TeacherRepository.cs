@@ -44,6 +44,18 @@ namespace University.DLL.Sqlite.Repositories.Real
             foundTeacher.Lessons = new List<Lesson>();
             await _dbContext.SaveChangesAsync();
         }
+        public async Task ResetExamScheduleAsync(Teacher teacher)
+        {
+            Teacher? foundTeacher = await _dbContext.Teachers
+                 .Include(t => t.Exams)
+                 .Where(t => t.FirstName == teacher.FirstName &&
+                             t.LastName == teacher.LastName &&
+                             t.SecondName == teacher.SecondName)
+                 .FirstOrDefaultAsync();
+
+            foundTeacher.Exams = new List<Exam>();
+            await _dbContext.SaveChangesAsync();
+        }
 
         public async Task<Teacher?> FindByIdAsync(int id)
         {
