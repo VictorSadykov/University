@@ -58,7 +58,9 @@ namespace University.Common
         public const string INSERT_ENTITY_NAME_MENU_ITEM = "Ввести название группы.";
         public const string START_SKIP = "Пропустить.";
         public const string BACK = "Назад.";
-        public const string GROUP_IS_NOT_FOUND = "Данного преподавателя/группы не существует. Попробуйте ввести имя преподавателя/группы правильно.\n\nДля выхода в главное меню нажмите кнопку.";
+        public const string GROUP_OR_TEACHER_IS_NOT_FOUND = "Данного преподавателя/группы не существует. Попробуйте ввести имя преподавателя/группы правильно.\n\nДля выхода в главное меню нажмите кнопку.";
+        public const string GROUP_IS_NOT_FOUND = "Данной группы не существует. Попробуйте ввести название группы правильно.\n\nДля выхода в главное меню нажмите кнопку.";
+        public const string GROUP_INFO_IS_NOT_YET_FILLED = "Эта информация о группе ещё не заполнена.";
         public const string INSERT_ENTITY_NAME = "Введите название учебной группы или инициалы преподавателя.\n\nПример:\nА01-02Б (для поиска по группе)\nИванов (для поиска по преподавателю только по фамилии)\nИванов И. О. (для поиска по преподавателю полностью по инициалам)\n\nДля выхода в главное меню нажмите на кнопку.";
         public const string RESET_SEARCH_QUERY_SUCCESSFULLY = "Поисковый запрос расписаний сброшен.";
 

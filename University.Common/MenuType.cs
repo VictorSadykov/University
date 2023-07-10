@@ -31,5 +31,6 @@ namespace University.Common
         AdminInsertingPracticeTeacherFullName,
         AdminInsertingPracticeStartDate,
         AdminInsertingPracticeEndDate,
+        GroupInfo,
     }
 }

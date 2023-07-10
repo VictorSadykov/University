@@ -75,8 +75,17 @@ namespace University.Bot
                 string callBackData = update.CallbackQuery.Data;
                 bool isCallbackUserAdmin = _adminController.IsAdmin(update.CallbackQuery.From.Username);
                 bool isCallbackNullEntity = _chatController.GetSearchQueryName(chatId) is null;
+                bool isCallbackEntityTeacher = _chatController.IsEntityTeacher(chatId);
                 switch (chatData.CurrentMenu)
                 {
+                    case MenuType.ExamSchedule:
+                        if (callBackData == "back")
+                        {
+                            _chatController.UpdateNextMenuById(chatId, null, chatData);
+                            await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackEntityTeacher, isCallbackNullEntity, cancellationToken);
+                            return;
+                        }
+                        break;
                     case MenuType.AdminInsertingGroupName:
                         if (callBackData == "backToMenu")
                         {
@@ -139,7 +148,7 @@ namespace University.Bot
                         {
                             if (callBackData == "backToMenu")
                             {
-                                await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackNullEntity, cancellationToken);
+                                await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackEntityTeacher, isCallbackNullEntity, cancellationToken);
                                 return;
                             }
                             else if (int.TryParse(callBackData, out int result))
@@ -147,6 +156,7 @@ namespace University.Bot
                                 Teacher teacher = await _teacherRepo.FindByIdAsync(int.Parse(callBackData));
                                 string teacherFullName = $"{teacher.LastName} {teacher.FirstName}. {teacher.SecondName}.";
                                 _chatController.UpdateSearchQueryName(chatId, teacherFullName, chatData);
+                                _chatController.UpdateIsEntityGroupFlagById(chatId, false, chatData);
                                 chatData.CurrentMenu = chatData.NextMenu;
 
                                 switch (chatData.CurrentMenu)
@@ -173,7 +183,7 @@ namespace University.Bot
                         {
                             if (callBackData == "backToMenu")
                             {
-                                await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackNullEntity, cancellationToken);
+                                await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackEntityTeacher, isCallbackNullEntity, cancellationToken);
                                 return;
                             }
                             else if (int.TryParse(callBackData, out int result))
@@ -222,7 +232,7 @@ namespace University.Bot
                     case MenuType.LessonScheduleForToday:
                         if (callBackData == "back")
                         {
-                            await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackNullEntity, cancellationToken);
+                            await GoToMainMenu(chatId, chatData, isCallbackUserAdmin, isCallbackEntityTeacher, isCallbackNullEntity, cancellationToken);
                         }
                         else if (callBackData == "prev" || callBackData == "next")
                         {
@@ -319,6 +329,7 @@ namespace University.Bot
             string text = update.Message.Text; // Текст сообщения
 
             bool isUserAdmin = _adminController.IsAdmin(update.Message.From.Username); // проверка есть ли пользователь в списке админов
+            bool isEntityTeacher = _chatController.IsEntityTeacher(chatId);
             bool isNullEntity = _chatController.GetSearchQueryName(chatId) is null;
 
             switch (chatData.CurrentMenu) // Проверка в каком меню должен находится пользователь
@@ -332,35 +343,42 @@ namespace University.Bot
                         }
                         else
                         {
-                            await GoToMainMenu(chatId, chatData, isUserAdmin, isNullEntity, cancellationToken);
+                            await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
                         }
                         break;
                     }
 
                 case MenuType.InsertingEntityName:
                     {
-                        if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, isNullEntity, cancellationToken)) break;
+                        if (await IfMessageIsBackGoToMainMenu(chatId, chatData, text, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken)) break;
 
                         
                         bool isStringGroupName = GroupNameAnalyser.DefineIsStringGroupName(text);
-                        _chatController.UpdateIsEntityGroupFlagById(chatId, isStringGroupName, chatData);
-
-                        Group? group;
-                        Teacher? teacher;
+                        Group? group = null;
+                        Teacher? teacher = null;
                         MenuType? nextMenu = _chatController.GetById(chatId).NextMenu;
                         int weekParity = WeekParityChecker.GetCurrentWeekParity();
-                        if (isStringGroupName) // Если ввели название группы, то ведётся поиск по группам
+                        if (isStringGroupName || nextMenu == MenuType.PracticeSchedule || nextMenu == MenuType.GroupInfo) // Если ввели название группы, то ведётся поиск по группам
                         {
                             group = _groupRepo.FindByName(text);
 
                             if (group is null)
                             {
-                                await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
+                                if (nextMenu == MenuType.PracticeSchedule || nextMenu == MenuType.GroupInfo)
+                                {
+                                    await _messanger.GroupIsNotFoundMessageAsync(chatId, cancellationToken);
+                                }
+                                else
+                                {
+                                    await _messanger.GroupOrTeacherIsNotFoundMessageAsync(chatId, cancellationToken);
+                                }
                                 return;
                             }
                             else
                             {
-                                _chatController.UpdateSearchQueryName(chatId, group.Name, chatData);                                
+                                _chatController.UpdateIsEntityGroupFlagById(chatId, isStringGroupName, chatData);
+                                _chatController.UpdateSearchQueryName(chatId, group.Name, chatData);
+                                
                             }
                             
                         }
@@ -381,8 +399,8 @@ namespace University.Bot
                                 {
                                     teacher = allTeachersWithSameLastName[0];
                                     string fullName = NameAnalyser.CombineToFullName(teacher.FirstName, teacher.LastName, teacher.SecondName);
-                                    _chatController.UpdateSearchQueryName(chatId, fullName, chatData);                                   
-                                   
+                                    _chatController.UpdateSearchQueryName(chatId, fullName, chatData);
+                                    _chatController.UpdateIsEntityGroupFlagById(chatId, isStringGroupName, chatData);
                                 }
                                 else
                                 {
@@ -400,37 +418,104 @@ namespace University.Bot
                                 else
                                 {
                                     string fullName = NameAnalyser.CombineToFullName(teacher.FirstName, teacher.LastName, teacher.SecondName);
+                                    _chatController.UpdateIsEntityGroupFlagById(chatId, isStringGroupName, chatData);
                                     _chatController.UpdateSearchQueryName(chatId, fullName, chatData);
                                   
                                 }
                             }
                         }
+                        isEntityTeacher = !isStringGroupName;
+                        isNullEntity = false;
 
                         switch (nextMenu)
                         {
                             case MenuType.LessonScheduleForWeek:
-                                await _messanger.SendWeekParityKeyboard(chatId, cancellationToken);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.WeekParityInsert, chatData);
-                                break;
+                                {
+                                    await _messanger.SendWeekParityKeyboard(chatId, cancellationToken);
+                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.WeekParityInsert, chatData);
+                                    break;
+                                }
                             case MenuType.LessonScheduleForToday:
-                                List<Lesson> dayLessons;
-                                string entityName = _chatController.GetSearchQueryName(chatId);
-                                int workingDaysCount = 0;
-                                if (isStringGroupName)
                                 {
-                                    dayLessons = await _lessonRepo.GetDayLessonsByGroupNameAsync(entityName, weekParity, DateTime.Now.DayOfWeek);
-                                    workingDaysCount = _groupRepo.GetWorkingDays(entityName).Count;
-                                }
-                                else
-                                {
-                                    dayLessons = await _lessonRepo.GetOneDayLessonsByTeacherFullNameAsync(entityName, weekParity, DateTime.Now.DayOfWeek);
-                                    workingDaysCount = _teacherRepo.GetWorkingDays(entityName).Count;
+                                    List<Lesson> dayLessons;
+                                    string entityName = _chatController.GetSearchQueryName(chatId);
+                                    int workingDaysCount = 0;
+                                    if (isStringGroupName)
+                                    {
+                                        dayLessons = await _lessonRepo.GetDayLessonsByGroupNameAsync(entityName, weekParity, DateTime.Now.DayOfWeek);
+                                        workingDaysCount = _groupRepo.GetWorkingDays(entityName).Count;
+                                    }
+                                    else
+                                    {
+                                        dayLessons = await _lessonRepo.GetOneDayLessonsByTeacherFullNameAsync(entityName, weekParity, DateTime.Now.DayOfWeek);
+                                        workingDaysCount = _teacherRepo.GetWorkingDays(entityName).Count;
 
+                                    }
+                                    await _messanger.SendOneDayScheduleAsync(chatId, entityName, isStringGroupName, workingDaysCount, dayLessons, DateTime.Now, weekParity, cancellationToken);
+                                    _chatController.UpdateNextMenuById(chatId, null, chatData);
+                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
+                                    break;
                                 }
-                                await _messanger.SendOneDayScheduleAsync(chatId, entityName, isStringGroupName, workingDaysCount, dayLessons, DateTime.Now, weekParity, cancellationToken);
-                                _chatController.UpdateNextMenuById(chatId, null, chatData);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
-                                break;
+                            case MenuType.ExamSchedule:
+                                {
+                                    string entityName = _chatController.GetSearchQueryName(chatId);
+                                    List<Exam> exams;
+                                    if (isStringGroupName)
+                                    {
+                                        exams = await _examRepo.GetExamsByGroupNameAsync(entityName);
+                                    }
+                                    else
+                                    {
+                                        exams = await _examRepo.GetExamsByTeacherFullNameAsync(entityName);
+                                    }
+                                    await _messanger.SendExamScheduleAsync(chatId, entityName, isStringGroupName, exams, cancellationToken);
+                                    _chatController.UpdateNextMenuById(chatId, null, chatData);
+                                    _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);
+                                    break;
+                                }
+                            case MenuType.PracticeSchedule:
+                                {
+                                    string? practiceBossName = group.PracticeTeacherFullName;
+                                    DateTime? practiceDateStart = group.PracticeDateStart;
+                                    DateTime? practiceDateEnd = group.PracticeDateEnd;
+
+                                    if (practiceBossName is null || practiceDateStart is null || practiceDateEnd is null)
+                                    {
+                                        await _messanger.SendGroupInfoIsNotYetFilledMessageAsync(chatId, cancellationToken);
+                                        _chatController.UpdateNextMenuById(chatId, null, chatData);
+                                        await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        await _messanger.SendGroupPracticeInfoAsync(chatId, practiceBossName, practiceDateStart, practiceDateEnd, cancellationToken);
+                                        _chatController.UpdateNextMenuById(chatId, null, chatData);
+                                        await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                    }
+
+                                    break;
+                                }
+                            case MenuType.GroupInfo:
+                                {
+                                    string groupName = group.Name;
+                                    string? groupCode = group.Code;
+                                    string? groupSpecialization = group.Specialization;
+                                    string? groupOrientation = group.Orientation;
+
+                                    if (groupCode is null || groupSpecialization is null || groupOrientation is null)
+                                    {
+                                        await _messanger.SendGroupInfoIsNotYetFilledMessageAsync(chatId, cancellationToken);
+                                        _chatController.UpdateNextMenuById(chatId, null, chatData);
+                                        await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        await _messanger.SendGroupInfoAsync(chatId, groupName, groupCode, groupSpecialization, groupOrientation, cancellationToken);
+                                        _chatController.UpdateNextMenuById(chatId, null, chatData);
+                                        await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                    }
+
+                                    break;
+                                }
                             default:
                                 break;
                         }
@@ -445,7 +530,7 @@ namespace University.Bot
                                 await GoToAdminMainMenu(chatId, chatData, cancellationToken);
                                 break;
                             case MenuMessages.ENTER_ORD_MENU:
-                                await GoToMainMenu(chatId, chatData, isUserAdmin, isNullEntity, cancellationToken);
+                                await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
                                 break;
 
                             default:
@@ -548,11 +633,18 @@ namespace University.Bot
 
                 case MenuType.AdminInsertingPracticeStartDate:
                     {
-                        text = text.Trim();
-                        Group group = _groupRepo.FindByName(chatData.AdminCurrentGroupEditingName);
-                        await _groupRepo.UpdatePracticeStartDateAsync(group, text);
-                        await _messanger.StartInsertingPracticeEndDate(chatId, group.Name, group.PracticeTeacherFullName, text, cancellationToken);
-                        _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminInsertingPracticeEndDate, chatData);
+                        try
+                        {
+                            text = text.Trim();
+                            Group group = _groupRepo.FindByName(chatData.AdminCurrentGroupEditingName);
+                            await _groupRepo.UpdatePracticeStartDateAsync(group, text);
+                            await _messanger.StartInsertingPracticeEndDate(chatId, group.Name, group.PracticeTeacherFullName, text, cancellationToken);
+                            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminInsertingPracticeEndDate, chatData);
+                        }
+                        catch (Exception)
+                        {
+                            await _messanger.WrongDateInsertedMessage(chatId, cancellationToken);
+                        }
                         break;
                     }
                 case MenuType.AdminInsertingGroupOrientation:
@@ -568,13 +660,20 @@ namespace University.Bot
                     }
                 case MenuType.AdminInsertingPracticeEndDate:
                     {
-                        text = text.Trim();
-                        Group group = _groupRepo.FindByName(chatData.AdminCurrentGroupEditingName);
-                        await _groupRepo.UpdatePracticeEndDateAsync(group, text);
-                        await _messanger.GroupPracticeInfoSavedAsync(chatId, group.Name, group.PracticeTeacherFullName, group.PracticeDateStart.ToString(), text, cancellationToken);
-                        _chatController.UpdateAdminCurrentEditingGroupName(chatId, null, chatData);
-                        _chatController.UpdateNextMenuById(chatId, null, chatData);
-                        await GoToAdminMainMenu(chatId, chatData, cancellationToken);
+                        try
+                        {
+                            text = text.Trim();
+                            Group group = _groupRepo.FindByName(chatData.AdminCurrentGroupEditingName);
+                            await _groupRepo.UpdatePracticeEndDateAsync(group, text);
+                            await _messanger.GroupPracticeInfoSavedAsync(chatId, group.Name, group.PracticeTeacherFullName, group.PracticeDateStart.Value.ToString("dd:MM:YYYY"), text, cancellationToken);
+                            _chatController.UpdateAdminCurrentEditingGroupName(chatId, null, chatData);
+                            _chatController.UpdateNextMenuById(chatId, null, chatData);
+                            await GoToAdminMainMenu(chatId, chatData, cancellationToken);
+                        }
+                        catch (Exception)
+                        {
+                            await _messanger.WrongDateInsertedMessage(chatId, cancellationToken);
+                        }                        
                         break;
                     }
 
@@ -724,40 +823,123 @@ namespace University.Bot
                                     break;
                                 }
 
+                            case MenuMessages.WATCH_EXAM_SCHEDULE:
+                                {
+                                    string? searchQueryName = _chatController.GetSearchQueryName(chatId);
+                                    if (searchQueryName is null)
+                                    {
+                                        _chatController.UpdateNextMenuById(chatId, MenuType.ExamSchedule, chatData);
+                                        _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingEntityName, chatData);
+                                        await _messanger.StartInsertingSearchQueryAsync(chatId, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);
 
+                                        List<Exam> exams;
+                                        if (isEntityTeacher)
+                                        {
+                                            exams = await _examRepo.GetExamsByTeacherFullNameAsync(searchQueryName);
+                                        }
+                                        else
+                                        {
+                                            exams = await _examRepo.GetExamsByGroupNameAsync(searchQueryName);
+                                        }
+                                        await _messanger.SendExamScheduleAsync(chatId, searchQueryName, isEntityTeacher, exams, cancellationToken);
+                                        _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);
+                                    }
+
+                                    break;
+                                }
 
                             case MenuMessages.WATCH_PRACTICE_SCHEDULE:
+                                {
+                                    string? searchQueryName = _chatController.GetSearchQueryName(chatId);
+                                    if (searchQueryName is null)
+                                    {
+                                        _chatController.UpdateNextMenuById(chatId, MenuType.PracticeSchedule, chatData);
+                                        _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingEntityName, chatData);
+                                        await _messanger.StartInsertingSearchQueryAsync(chatId, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        if (chatData.isEntityGroup == true)
+                                        {
+                                            Group group = _groupRepo.FindByName(searchQueryName);
+                                            string? practiceBossName = group.PracticeTeacherFullName;
+                                            DateTime? practiceDateStart = group.PracticeDateStart;
+                                            DateTime? practiceDateEnd = group.PracticeDateEnd;
 
-                               /* await _messanger.SendStartingInsertGroupNameAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.PracticeSchedule, chatData);*/
+                                            if (practiceBossName is null || practiceDateStart is null || practiceDateEnd is null)
+                                            {
+                                                await _messanger.SendGroupInfoIsNotYetFilledMessageAsync(chatId, cancellationToken);
+                                                await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                            }
+                                            else
+                                            {
+                                                await _messanger.SendGroupPracticeInfoAsync(chatId, practiceBossName, practiceDateStart, practiceDateEnd, cancellationToken);
+                                                await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                            }
+                                        }
+                                    }
 
-                                break;
+                                    break;
+                                }
+                            case MenuMessages.WATCH_GROUP_INFO:
+                                {
+                                    string? searchQueryName = _chatController.GetSearchQueryName(chatId);
+                                    if (searchQueryName is null)
+                                    {
+                                        _chatController.UpdateNextMenuById(chatId, MenuType.GroupInfo, chatData);
+                                        _chatController.UpdateCurrentMenuById(chatId, MenuType.InsertingEntityName, chatData);
+                                        await _messanger.StartInsertingSearchQueryAsync(chatId, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        if (chatData.isEntityGroup == true)
+                                        {
+                                            Group group = _groupRepo.FindByName(searchQueryName);
+                                            string groupName = group.Name;
+                                            string? groupCode = group.Code;
+                                            string? groupSpecialization = group.Specialization;
+                                            string? groupOrientation = group.Orientation;
 
-                            case MenuMessages.WATCH_EXAM_SCHEDULE:
+                                            if (groupCode is null || groupSpecialization is null || groupOrientation is null)
+                                            {
+                                                await _messanger.SendGroupInfoIsNotYetFilledMessageAsync(chatId, cancellationToken);
+                                                await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                            }
+                                            else
+                                            {
+                                                await _messanger.SendGroupInfoAsync(chatId, groupName, groupCode, groupSpecialization, groupOrientation, cancellationToken);
+                                                await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
+                                            }
 
-                               /* await _messanger.SendStartingInsertGroupNameAsync(chatId);
-                                _chatController.UpdateCurrentMenuById(chatId, MenuType.ExamSchedule, chatData);*/
+                                            break;
+                                        }
+                                    }
 
-                                break;
+                                    break;
+                                }
 
                             case MenuMessages.WATCH_CORPUS_INFO:
 
                                 string corpusMessage = await _infoController.GetCorpusInfo();
-                                await SendInfoAndGoToMainMenu(chatId, corpusMessage, chatData, isUserAdmin, isNullEntity, cancellationToken);
+                                await SendInfoAndGoToMainMenu(chatId, corpusMessage, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
 
                                 break;
 
                             case MenuMessages.WATCH_HEAD_INFO:
 
                                 string headMessage = await _infoController.GetHeadInfo();
-                                await SendInfoAndGoToMainMenu(chatId, headMessage, chatData, isUserAdmin, isNullEntity, cancellationToken);
+                                await SendInfoAndGoToMainMenu(chatId, headMessage, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
 
                                 break;
 
                             case MenuMessages.WATCH_LINKS_INFO:
 
                                 string linksMessage = await _infoController.GetLinksInfo();
-                                await SendInfoAndGoToMainMenu(chatId, linksMessage, chatData, isUserAdmin, isNullEntity, cancellationToken);
+                                await SendInfoAndGoToMainMenu(chatId, linksMessage, chatData, isUserAdmin, isEntityTeacher, isNullEntity, cancellationToken);
 
                                 break;
 
@@ -772,10 +954,10 @@ namespace University.Bot
                             case MenuMessages.RESET_SEARCH_QUERY:
                                 if (!isNullEntity)
                                 {
-                                    await _messanger.SendSearchQueryResetedSuccessfully(chatId, isUserAdmin, !isNullEntity, cancellationToken);
-                                    _chatController.UpdateIsEntityGroupFlagById(chatId, false, chatData);
                                     _chatController.UpdateSearchQueryName(chatId, null, chatData);
-                                }  
+                                    _chatController.UpdateIsEntityGroupFlagById(chatId, false, chatData);
+                                    await _messanger.SendSearchQueryResetedSuccessfully(chatId, isUserAdmin, isEntityTeacher, !isNullEntity, cancellationToken);
+                                }
                                 break;
                         }
 
@@ -867,10 +1049,10 @@ namespace University.Bot
         /// <param name="isUserAdmin"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public async Task GoToMainMenu(long chatId, ChatData chatData, bool isUserAdmin, bool isNullEntity, CancellationToken ct)
+        public async Task GoToMainMenu(long chatId, ChatData chatData, bool isUserAdmin, bool isEntityTeacher, bool isNullEntity, CancellationToken ct)
         {
             _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-            await _messanger.SendMainMenuAsync(chatId, isUserAdmin, isNullEntity, ct);
+            await _messanger.SendMainMenuAsync(chatId, isUserAdmin, isEntityTeacher, isNullEntity, ct);
         }
 
         /// <summary>
@@ -909,21 +1091,21 @@ namespace University.Bot
         /// <param name="isUserAdmin"></param>
         /// <param name=""></param>
         /// <returns></returns>
-        public async Task SendInfoAndGoToMainMenu(long chatId, string infoTextMessage, ChatData chatData, bool isUserAdmin, bool isNullEntity, CancellationToken ct)
+        public async Task SendInfoAndGoToMainMenu(long chatId, string infoTextMessage, ChatData chatData, bool isUserAdmin, bool isEntityTeacher, bool isNullEntity, CancellationToken ct)
         {
             _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
-            await _messanger.SendInfoAsync(chatId, infoTextMessage, isUserAdmin, isNullEntity, ct);
+            await _messanger.SendInfoAsync(chatId, infoTextMessage, isUserAdmin, isEntityTeacher, isNullEntity, ct);
         }
 
         /// <summary>
         /// Проверяет, если пользователь нажал назад, то отправляет в главное меню
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> IfMessageIsBackGoToMainMenu(long chatId, ChatData chatData, string text, bool isUserAdmin, bool isNullEntity, CancellationToken ct)
+        public async Task<bool> IfMessageIsBackGoToMainMenu(long chatId, ChatData chatData, string text, bool isUserAdmin, bool isEntityTeacher, bool isNullEntity, CancellationToken ct)
         {
             if (text == MenuMessages.BACK)
             {
-                await GoToMainMenu(chatId, chatData, isUserAdmin, isNullEntity, ct);
+                await GoToMainMenu(chatId, chatData, isUserAdmin, isEntityTeacher, isNullEntity, ct);
                 return true;
             }
 
@@ -1023,13 +1205,7 @@ namespace University.Bot
         }
 
 
-        /*public async Task GoToTodaySchedule(Messanger messanger, long chatId, ChatData chatData, string groupName)
-        {
-            List<Lesson> todayLessons = await Task.Run(() => _lessonRepo.GetTodayLessonsByGroupNameAsync(groupName).Result);
-
-            await messanger.SendOneDayScheduleAsync(chatId, todayLessons, groupName, DateTime.Now);
-            _chatController.UpdateCurrentMenuById(chatId, MenuType.LessonScheduleForToday, chatData);
-        }*/
+        
 
 
     }

@@ -14,10 +14,17 @@ namespace University.Bot
     public static class MessageDrawer
     {
 
-        public static ReplyKeyboardMarkup GetMainMenuKeyboard(bool isUserAdmin, bool isNullEntity)
+        public static ReplyKeyboardMarkup GetMainMenuKeyboard(bool isUserAdmin, bool isEntityTeacher, bool isNullEntity)
         {
             ReplyKeyboardMarkup replyKeyboardMarkup;
             KeyboardButton[][] buttons = GetMainMenuKeys();
+
+
+            if (!isEntityTeacher || isNullEntity)
+            {
+                buttons = buttons.Append(new KeyboardButton[] { MenuMessages.WATCH_GROUP_INFO }).ToArray();
+                buttons = buttons.Append(new KeyboardButton[] { MenuMessages.WATCH_PRACTICE_SCHEDULE }).ToArray();
+            }
 
             if (!isNullEntity) // Если записано название сущности по которой ищется расписание, то добавляется кнопка сброса поискового запроса
             {
@@ -106,9 +113,7 @@ namespace University.Bot
                 {
                     new KeyboardButton[] {MenuMessages.WATCH_TODAY_SCHEDULE},
                     new KeyboardButton[] {MenuMessages.WATCH_WEEK_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_EXAM_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_PRACTICE_SCHEDULE},
-                    new KeyboardButton[] {MenuMessages.WATCH_GROUP_INFO},
+                    new KeyboardButton[] {MenuMessages.WATCH_EXAM_SCHEDULE},                    
                     new KeyboardButton[] {MenuMessages.WATCH_CORPUS_INFO},
                     new KeyboardButton[] {MenuMessages.WATCH_HEAD_INFO},
                     new KeyboardButton[] {MenuMessages.WATCH_LINKS_INFO},

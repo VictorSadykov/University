@@ -61,6 +61,12 @@ namespace University.BLL
             return chatData?.SearchQueryName;
         }
 
+        public bool IsEntityTeacher(long chatId)
+        {
+            ChatData? chatData = GetById(chatId);
+
+            return chatData is null ? false : !chatData.isEntityGroup;
+        }
        
 
         public void UpdateNextMenuById(long chatId, MenuType? menuType, ChatData chatData)

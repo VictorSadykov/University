@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using University.DLL.Sqlite.Entities;
 using University.DLL.Sqlite.Repositories.Abstract;
+using University.MiniMethods;
 
 namespace University.DLL.Sqlite.Repositories.Real
 {
@@ -31,11 +32,26 @@ namespace University.DLL.Sqlite.Repositories.Real
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task<List<Exam>?> GetExamsByGroupName(string groupName)
+        public async Task<List<Exam>?> GetExamsByGroupNameAsync(string groupName)
         {
             return await _dbContext.Exams
                 .Include(e => e.Group)
+                .Include(e => e.Teacher)
                 .Where(e => e.Group.Name == groupName)
+                .ToListAsync();
+        }
+
+        public async Task<List<Exam>?> GetExamsByTeacherFullNameAsync(string teacherFullName)
+        {
+            (string fistName, string lastName, string secondName) = NameAnalyser.FullNameParseToStrings(teacherFullName);
+
+            return await _dbContext.Exams
+                .Include(e => e.Group)
+                .Include(e => e.Teacher)
+                .Where(e => 
+                    e.Teacher.FirstName == fistName &&
+                    e.Teacher.LastName == lastName &&
+                    e.Teacher.SecondName == secondName)
                 .ToListAsync();
         }
     }
