@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace University.BLL
 {
+    /// <summary>
+    /// Класс работы с json
+    /// </summary>
     public class JsonService
     {
         private string _storagePath;

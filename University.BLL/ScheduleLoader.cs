@@ -15,7 +15,7 @@ using University.MiniMethods;
 namespace University.BLL
 {
     /// <summary>
-    /// Класс, используя PDF файлы расписаний, загружает в базу данных информацию о группах и их расписание.
+    /// Парсер расписаний
     /// </summary>
     public class ScheduleLoader
     {

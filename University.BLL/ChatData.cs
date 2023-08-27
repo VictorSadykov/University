@@ -7,6 +7,9 @@ using University.Common;
 
 namespace University.BLL
 {
+    /// <summary>
+    /// Модель хранения данных каждого чата
+    /// </summary>
     public class ChatData
     {
         public long ChatId { get; set; }

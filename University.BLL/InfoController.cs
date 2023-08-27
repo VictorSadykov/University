@@ -7,6 +7,9 @@ using University.Common;
 
 namespace University.BLL
 {
+    /// <summary>
+    /// Класс оперирующий с файлами для информационных сообщений
+    /// </summary>
     public class InfoController
     {
         private const string HEAD_PATH = DataConfig.DATA_FOLDER_PATH + "info/head.txt";

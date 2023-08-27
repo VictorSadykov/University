@@ -1118,7 +1118,7 @@ namespace University.Bot
         }
         public async Task SendCorpusFileLoadedSuccessfully(long chatId, ChatData chatData, CancellationToken ct)
         {
-            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
             await _messanger.SendCorpusFileLoadedSuccessfullyAsync(chatId, ct);
         }
 
@@ -1129,7 +1129,7 @@ namespace University.Bot
         }
         public async Task SendHeadFileLoadedSuccessfully(long chatId, ChatData chatData, CancellationToken ct)
         {
-            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
             await _messanger.SendHeadFileLoadedSuccessfullyAsync(chatId, ct);
         }
 
@@ -1141,7 +1141,7 @@ namespace University.Bot
 
         public async Task SendLinksFileLoadedSuccessfully(long chatId, ChatData chatData, CancellationToken ct)
         {
-            _chatController.UpdateCurrentMenuById(chatId, MenuType.MainMenu, chatData);
+            _chatController.UpdateCurrentMenuById(chatId, MenuType.AdminMainMenu, chatData);
             await _messanger.SendLinksFileLoadedSuccessfullyAsync(chatId, ct);
         }
 
